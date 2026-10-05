@@ -35,6 +35,7 @@
   },
   "name":"The Farm",
   "resources":[
+    {"id":{"name":"obj_camera","path":"objects/obj_camera/obj_camera.yy",},},
     {"id":{"name":"obj_door_final","path":"objects/obj_door_final/obj_door_final.yy",},},
     {"id":{"name":"obj_door_key","path":"objects/obj_door_key/obj_door_key.yy",},},
     {"id":{"name":"obj_drawer","path":"objects/obj_drawer/obj_drawer.yy",},},
