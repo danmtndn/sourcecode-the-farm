@@ -38,31 +38,48 @@ if (place_meeting(x + hsp, y, obj_solid)) {
     hsp = 0;
 }
 
-// Pushable: try to push box if moving into it and space beyond is free
+// Pushable: if walking into box and box can move, move box same amount.
+// Else stop player at box edge.
 var _box = instance_place(x + hsp, y, obj_pushable);
 if (_box != noone && hsp != 0) {
-    var _dir = sign(hsp);
-    // Only push horizontally when player is roughly on same height and box can move
-    if (!place_meeting(_box.x + _dir * 4, _box.y, obj_solid)
-    && !place_meeting(_box.x + _dir * 4, _box.y, obj_pushable)) {
-        _box.x += _dir * 3;
+    var _push_dir = sign(hsp);
+    var _box_can_move = true;
+    // Would box hit a wall at its destination? (checked from player scope;
+    // masks are same placeholder sprite, so result matches box mask)
+    if (place_meeting(_box.x + hsp, _box.y, obj_solid)) _box_can_move = false;
+    // Would box hit another box?
+    if (_box_can_move) {
+        var _hit2 = instance_place(_box.x + hsp, _box.y, obj_pushable);
+        if (_hit2 != noone && _hit2 != _box) _box_can_move = false;
+    }
+    if (_box_can_move) {
+        _box.x += hsp; // same speed as player so they stay together
     } else {
-        // Blocked: stop player
-        if (place_meeting(x + hsp, y, obj_pushable)) hsp = 0;
+        // Blocked: snap player to contact edge and stop
+        while (!place_meeting(x + _push_dir, y, obj_pushable)
+        && !place_meeting(x + _push_dir, y, obj_solid)
+        && abs(x - _box.x) > 1) {
+            x += _push_dir;
+            if (abs(x) > room_width + 1000) break;
+        }
+        hsp = 0;
     }
 }
 
 x += hsp;
 
-// Vertical collide
-if (place_meeting(x, y + vsp, obj_solid)) {
-    while (!place_meeting(x, y + sign(vsp), obj_solid)) y += sign(vsp);
+// Vertical collide (stand on both ground AND boxes so pushable works as platform)
+if (place_meeting(x, y + vsp, obj_solid) || place_meeting(x, y + vsp, obj_pushable)) {
+    while (!place_meeting(x, y + sign(vsp), obj_solid)
+    && !place_meeting(x, y + sign(vsp), obj_pushable)) {
+        y += sign(vsp);
+    }
     vsp = 0;
 }
 y += vsp;
 
-// Grounded jump
-if (jump_key_pressed && place_meeting(x, y + 1, obj_solid)) {
+// Grounded jump (from ground or box)
+if (jump_key_pressed && (place_meeting(x, y + 1, obj_solid) || place_meeting(x, y + 1, obj_pushable))) {
     vsp = jump_speed;
 }
 
