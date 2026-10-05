@@ -1,6 +1,7 @@
 // obj_game - Step: intro/outro flow, damage flash timer, achievement popup timer
 if (global.damage_flash > 0) global.damage_flash -= 1;
 if (global.ach_timer > 0) global.ach_timer -= 1;
+if (global.paper_timer > 0) global.paper_timer -= 1;
 
 // Remember spawn for respawn (first player position in each room)
 if (room != room_first && false) {} // placeholder

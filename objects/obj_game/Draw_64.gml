@@ -15,6 +15,18 @@ draw_set_color(c_white);
 draw_text(24, 44, "Keys: " + string(global.has_key));
 if (global.code_found != "") draw_text(24, 64, "Code: **** (found)");
 
+// Paper contents popup so player can actually see the password
+if (global.paper_timer > 0) {
+    draw_set_color(c_black);
+    draw_rectangle(_gw/2 - 180, _gh/2 - 70, _gw/2 + 180, _gh/2 + 10, false);
+    draw_set_color(c_white);
+    draw_rectangle(_gw/2 - 180, _gh/2 - 70, _gw/2 + 180, _gh/2 + 10, true);
+    draw_text(_gw/2 - 160, _gh/2 - 60, "NOTE FOUND:");
+    draw_text(_gw/2 - 160, _gh/2 - 36, global.paper_text);
+    draw_text(_gw/2 - 160, _gh/2 - 12, "Memorize for final door [E to close]");
+    if (keyboard_check_pressed(ord("E"))) global.paper_timer = 0;
+}
+
 // Red visual indicator on damage (contract requirement)
 if (global.damage_flash > 0) {
     draw_set_alpha(0.45);
