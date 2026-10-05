@@ -1,4 +1,8 @@
 // obj_player - Step: horizontal move + jump + collide + push + damage
+// Uses custom hsp/vsp only (no built-in hspeed/vspeed/direction).
+if (!variable_instance_exists(id, "hsp")) hsp = 0;
+if (!variable_instance_exists(id, "vsp")) vsp = 0;
+
 right_key = keyboard_check(ord("D")) || keyboard_check(vk_right);
 left_key  = keyboard_check(ord("A")) || keyboard_check(vk_left);
 jump_key_pressed = keyboard_check_pressed(ord("W")) || keyboard_check_pressed(vk_up) || keyboard_check_pressed(vk_space);
@@ -10,8 +14,14 @@ if (invuln > 0) invuln -= 1;
 // Pause during intro / outro / death (obj_game controls state)
 if (instance_exists(obj_game)) {
     if (obj_game.state != "play") {
-        hspeed = 0;
-        vspeed += grav;
+        hsp = 0;
+        vsp += grav;
+        if (place_meeting(x, y + vsp, obj_solid)) {
+            while (!place_meeting(x, y + sign(vsp), obj_solid)) y += sign(vsp);
+            vsp = 0;
+        }
+        y += vsp;
+        x += hsp;
         exit;
     }
 }
