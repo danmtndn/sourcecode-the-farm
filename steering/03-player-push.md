@@ -1,7 +1,7 @@
 # Player + Pushable
 
 ## Controls
-A/D or arrows move (4px/f), W/Up/Space jump (-11, grav 0.6), E interact, ENTER intro advance, R retry, ESC cancel typing.
+A/D or arrows move (4px/f), W/Up/Space jump (-11, grav 0.6), E interact, N view/close note, ENTER intro advance, R retry, ESC cancel typing.
 
 ## `obj_player/Step_0.gml`
 1. Read keys, tick `interact_cd/invuln`.

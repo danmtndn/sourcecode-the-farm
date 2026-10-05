@@ -13,18 +13,30 @@ for (var i = 0; i < global.max_hp; i++) {
 }
 draw_set_color(c_white);
 draw_text(24, 44, "Keys: " + string(global.has_key));
-if (global.code_found != "") draw_text(24, 64, "Code: **** (found)");
+if (global.code_found != "") draw_text(24, 64, "Code found [N view]");
 
-// Paper contents popup so player can actually see the password
-if (global.paper_timer > 0) {
+// Zoomed paper overlay: N toggles, code drawn ON the paper
+if (global.note_open && global.code_found != "") {
+    // Slightly transparent black to emphasize the paper
+    draw_set_alpha(0.8);
     draw_set_color(c_black);
-    draw_rectangle(_gw/2 - 180, _gh/2 - 70, _gw/2 + 180, _gh/2 + 10, false);
-    draw_set_color(c_white);
-    draw_rectangle(_gw/2 - 180, _gh/2 - 70, _gw/2 + 180, _gh/2 + 10, true);
-    draw_text(_gw/2 - 160, _gh/2 - 60, "NOTE FOUND:");
-    draw_text(_gw/2 - 160, _gh/2 - 36, global.paper_text);
-    draw_text(_gw/2 - 160, _gh/2 - 12, "Memorize for final door [E to close]");
-    if (keyboard_check_pressed(ord("E"))) global.paper_timer = 0;
+    draw_rectangle(0, 0, _gw, _gh, false);
+    draw_set_alpha(1);
+
+    // Zoomed paper (placeholder sprite; user swaps global.note_sprite later)
+    var _ps = global.note_sprite;
+    var _pw = sprite_get_width(_ps);
+    var _ph = sprite_get_height(_ps);
+    var _scale = min(3, max(1.5, _gh / (_ph * 4)));
+    draw_sprite_ext(_ps, 0, _gw/2, _gh/2 - 20, _scale, _scale, 0, c_white, 1);
+
+    // Code written on the paper
+    draw_set_color(c_black);
+    draw_text(_gw/2 - 80, _gh/2 - 20, global.code_found);
+
+    // Hint
+    draw_set_color(c_dkgray);
+    draw_text(_gw/2 - 80, _gh/2 + _ph * _scale / 2 + 16, "[N] close note");
 }
 
 // Red visual indicator on damage (contract requirement)

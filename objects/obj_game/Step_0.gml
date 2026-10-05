@@ -1,7 +1,11 @@
 // obj_game - Step: intro/outro flow, damage flash timer, achievement popup timer
 if (global.damage_flash > 0) global.damage_flash -= 1;
 if (global.ach_timer > 0) global.ach_timer -= 1;
-if (global.paper_timer > 0) global.paper_timer -= 1;
+// N toggles the zoomed paper view (only once a note has been found, while playing)
+if (state == "play" && global.code_found != "" && keyboard_check_pressed(ord("N"))) {
+    global.note_open = !global.note_open;
+}
+if (state != "play") global.note_open = false;
 
 // Remember spawn for respawn (first player position in each room)
 if (room != room_first && false) {} // placeholder

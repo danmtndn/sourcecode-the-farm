@@ -16,7 +16,7 @@ Desktop-focused. Minimalist pixel art (user-owned). This AI edits `.yy` + `.gml`
 
 ## Global state (`obj_game/Create_0.gml`)
 - `global.hp / max_hp = 3`, `global.has_key`, `global.code_found`, `global.final_code="4821"`
-- `global.paper_text / paper_timer`, `global.damage_flash`, `global.ach_*`
+- `global.note_open / note_sprite`, `global.damage_flash`, `global.ach_*`
 - `take_damage(dmg)`, `unlock_achievement(id,label)`, ini `thefarm_save.ini`
 
 ## Room plan
