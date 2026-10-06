@@ -3,6 +3,10 @@
 if (!variable_instance_exists(id, "hsp")) hsp = 0;
 if (!variable_instance_exists(id, "vsp")) vsp = 0;
 
+// Hard freeze while paused: no gravity, motion, or cooldown timers.
+// (The intro/outro/death branch below intentionally still settles.)
+if (instance_exists(obj_game) && obj_game.state == "pause") exit;
+
 right_key = keyboard_check(ord("D")) || keyboard_check(vk_right);
 left_key  = keyboard_check(ord("A")) || keyboard_check(vk_left);
 jump_key_pressed = keyboard_check_pressed(ord("W")) || keyboard_check_pressed(vk_up) || keyboard_check_pressed(vk_space);
@@ -11,7 +15,7 @@ interact_pressed = keyboard_check_pressed(ord("E"));
 if (interact_cd > 0) interact_cd -= 1;
 if (invuln > 0) invuln -= 1;
 
-// Pause during intro / outro / death (obj_game controls state)
+// Settle during intro / outro / death (pause freezes above; obj_game controls state)
 if (instance_exists(obj_game)) {
     if (obj_game.state != "play") {
         hsp = 0;
