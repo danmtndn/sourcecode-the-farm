@@ -15,7 +15,7 @@ if (!variable_global_exists("vignette_alpha")) global.vignette_alpha = 1;
 // purely from the additive glows below. ambient_alpha near 1 = darker.
 // Toggle with global.darkness_enabled.
 if (!variable_global_exists("darkness_enabled")) global.darkness_enabled = true;
-if (!variable_global_exists("ambient_alpha")) global.ambient_alpha = 0.9;
+if (!variable_global_exists("ambient_alpha")) global.ambient_alpha = 0.8;
 ambient_color = make_colour_rgb(5, 5, 14);
 
 emitters = [

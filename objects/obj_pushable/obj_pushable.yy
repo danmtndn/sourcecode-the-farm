@@ -32,8 +32,8 @@
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"spr_solid",
-    "path":"sprites/spr_solid/spr_solid.yy",
+    "name":"spr_pushable",
+    "path":"sprites/spr_pushable/spr_pushable.yy",
   },
   "spriteMaskId":null,
   "visible":true,

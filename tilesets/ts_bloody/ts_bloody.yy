@@ -1,13 +1,13 @@
 {
   "$GMTileSet":"v1",
-  "%Name":"ts_one",
+  "%Name":"ts_bloody",
   "autoTileSets":[],
   "macroPageTiles":{
     "SerialiseHeight":0,
     "SerialiseWidth":0,
     "TileSerialiseData":[],
   },
-  "name":"ts_one",
+  "name":"ts_bloody",
   "out_columns":48,
   "out_tilehborder":2,
   "out_tilevborder":2,
@@ -18,8 +18,8 @@
   "resourceType":"GMTileSet",
   "resourceVersion":"2.0",
   "spriteId":{
-    "name":"bg_one",
-    "path":"sprites/bg_one/bg_one.yy",
+    "name":"bg_bloody",
+    "path":"sprites/bg_bloody/bg_bloody.yy",
   },
   "spriteNoExport":false,
   "textureGroupId":{

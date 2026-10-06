@@ -27,7 +27,7 @@ if (menu_settings && keyboard_check_pressed(vk_escape)) {
             selected = 1;
         }
     } else if (_confirm) {
-        if (selected == 0) room_goto(rm_level_1);
+        if (selected == 0) room_goto(rm_level_3);
         else if (selected == 1) {
             menu_settings = true;
             selected = 0;
