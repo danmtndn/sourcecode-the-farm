@@ -1,22 +1,23 @@
-// obj_glow - Create: flat room darkness + additive glow per emitter.
+// obj_glow - Create: multiplicative night map (one surface, added lights).
 // PERSISTENT: place ONE instance in rm_menu only; it survives room changes.
-// One fullscreen quad plus a few sprite draws per frame: cheapest possible.
+// One room-sized surface plus a few sprite draws per frame: cheap.
 //
-// To make an object glow, add a row below:
+// To give an object a pool of light, add a row below:
 //   [object, radius_px, color, alpha, flicker, y_offset]
-// flicker 0 = steady glow, higher = stronger pulse. y_offset lifts the glow
-// above feet-origin sprites. Toggle everything with global.glow_enabled.
-if (!variable_global_exists("glow_enabled")) global.glow_enabled = true;
+// flicker 0 = steady hole, higher = stronger pulse. y_offset lifts the hole
+// above feet-origin sprites.
 // Vignette: one stretched texture over the GUI, also nearly free.
 // Strength is baked into the texture; this scales it (1 = as authored, 0 = off).
 if (!variable_global_exists("vignette_enabled")) global.vignette_enabled = true;
 if (!variable_global_exists("vignette_alpha")) global.vignette_alpha = 1;
-// Darkness: flat room-wide dimming (see Draw End); light pools come
-// purely from the additive glows below. ambient_alpha near 1 = darker.
+// Darkness: multiplicative night map (see Draw End). The map starts at
+// ambient_color and lights add into it, then it multiplies over the scene.
+// Set the night depth directly here: darker color = darker night.
+// (global.ambient_alpha is retired; it belonged to the old subtract math.)
 // Toggle with global.darkness_enabled.
 if (!variable_global_exists("darkness_enabled")) global.darkness_enabled = true;
-if (!variable_global_exists("ambient_alpha")) global.ambient_alpha = 0.8;
-ambient_color = make_colour_rgb(5, 5, 14);
+ambient_color = make_colour_rgb(30, 30, 42);
+dark_surf = -1;
 
 emitters = [
     [obj_player,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
