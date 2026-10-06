@@ -49,52 +49,120 @@ pushing = false;
 hsp = _move * move_speed;
 vsp += grav;
 
-// Horizontal collide (walls + closed doors are solid)
+// Grounded state before moving (drives the slope-down snap later).
+var _was_grounded = (place_meeting(x, y + 1, obj_solid)
+|| place_meeting(x, y + 1, obj_pushable)
+|| place_meeting(x, y + 1, obj_door_key)
+|| place_meeting(x, y + 1, obj_door_final));
+
+// Horizontal collide (walls + closed doors are solid), with slope-up
+// assist: step onto ramps and low lips within reach instead of stopping.
+// (slope_max lives in Create; doors are far taller, so they still block.)
 if (place_meeting(x + hsp, y, obj_solid)
 || place_meeting(x + hsp, y, obj_door_key)
 || place_meeting(x + hsp, y, obj_door_final)) {
-    while (!place_meeting(x + sign(hsp), y, obj_solid)
-    && !place_meeting(x + sign(hsp), y, obj_door_key)
-    && !place_meeting(x + sign(hsp), y, obj_door_final)) x += sign(hsp);
-    hsp = 0;
+    var _rise = 0;
+    while (_rise < slope_max
+    && (place_meeting(x + hsp, y - _rise, obj_solid)
+    || place_meeting(x + hsp, y - _rise, obj_door_key)
+    || place_meeting(x + hsp, y - _rise, obj_door_final))) _rise++;
+    // Climb only onto a fully free cell (never rise into an overhanging box).
+    if (_rise < slope_max
+    && !place_meeting(x + hsp, y - _rise, obj_solid)
+    && !place_meeting(x + hsp, y - _rise, obj_door_key)
+    && !place_meeting(x + hsp, y - _rise, obj_door_final)
+    && !place_meeting(x + hsp, y - _rise, obj_pushable)) {
+        y -= _rise; // climb; x += hsp below carries us forward
+    } else {
+        while (!place_meeting(x + sign(hsp), y, obj_solid)
+        && !place_meeting(x + sign(hsp), y, obj_door_key)
+        && !place_meeting(x + sign(hsp), y, obj_door_final)) x += sign(hsp);
+        hsp = 0;
+    }
 }
 
 // Pushable: pixel-step push so neither player nor box can tunnel/clip.
 // Box is blocked by walls, other boxes, closed doors and the enemy (heavy, never pushed).
+// NOTE: box-destination tests run with the BOX mask (ours is narrower), so
+// boxes stop exactly at contact instead of sinking ~12px into things.
 var _box = instance_place(x + hsp, y, obj_pushable);
 if (_box != noone && hsp != 0) {
     pushing = true; // engaged with a box (even if it ends up blocked)
     var _push_dir = sign(hsp);
     var _steps = abs(hsp);
     var _moved = 0;
+    var _keep_mask = mask_index;
     for (var _i = 0; _i < _steps; _i++) {
-        // Would box hit something at its next pixel? (checked from player scope;
-        // masks are same placeholder sprite, so result matches box mask)
-        var _box_blocked = false;
-        if (place_meeting(_box.x + _push_dir, _box.y, obj_solid)) _box_blocked = true;
-        if (! _box_blocked && place_meeting(_box.x + _push_dir, _box.y, obj_door_key)) _box_blocked = true;
-        if (! _box_blocked && place_meeting(_box.x + _push_dir, _box.y, obj_door_final)) _box_blocked = true;
-        if (!_box_blocked) {
-            var _hit2 = instance_place(_box.x + _push_dir, _box.y, obj_pushable);
-            if (_hit2 != noone && _hit2 != _box) _box_blocked = true;
+        // Destination tests with the BOX mask (48px sprite), not our
+        // narrower 23px body, so edges register exactly.
+        mask_index = spr_pushable;
+        var _solid_hit = place_meeting(_box.x + _push_dir, _box.y, obj_solid);
+        var _door_hit = place_meeting(_box.x + _push_dir, _box.y, obj_door_key)
+            || place_meeting(_box.x + _push_dir, _box.y, obj_door_final);
+        var _foe_hit = instance_exists(obj_enemy)
+            && instance_place(_box.x + _push_dir, _box.y, obj_enemy) != noone;
+        mask_index = _keep_mask;
+        // Other-box overlap via exact extents. (instance_place returns a
+        // single match, so a neighbor hiding behind _box itself would slip
+        // through — and boxes may be scaled, so each side is measured.)
+        // Sprite is 48px, bottom-center origin: 24*sx each side, 48*sy tall.
+        var _box_hit = false;
+        var _bcount = instance_number(obj_pushable);
+        for (var _bix = 0; _bix < _bcount; _bix++) {
+            var _btest = instance_find(obj_pushable, _bix);
+            if (_btest == _box) continue;
+            var _tx = _box.x + _push_dir;
+            if (_tx - 24 * _box.image_xscale < _btest.x + 24 * _btest.image_xscale
+            && _tx + 24 * _box.image_xscale > _btest.x - 24 * _btest.image_xscale
+            && _box.y - 48 * _box.image_yscale < _btest.y
+            && _box.y > _btest.y - 48 * _btest.image_yscale) { _box_hit = true; break; }
         }
-        // Never shove the box into the enemy (would embed enemy inside box).
-        if (!_box_blocked && instance_exists(obj_enemy)) {
-            var _hitE = instance_place(_box.x + _push_dir, _box.y, obj_enemy);
-            if (_hitE != noone) _box_blocked = true;
+        // Player path with the PLAYER mask.
+        var _player_hit = place_meeting(x + _push_dir, y, obj_solid)
+            || place_meeting(x + _push_dir, y, obj_door_key)
+            || place_meeting(x + _push_dir, y, obj_door_final);
+        if (!_solid_hit && !_door_hit && !_foe_hit && !_box_hit && !_player_hit) {
+            _box.x += _push_dir;
+            x += _push_dir;
+            _moved += 1;
+            continue;
         }
-        // Would player hit a wall/door at ITS next pixel?
-        if (!_box_blocked
-        && (place_meeting(x + _push_dir, y, obj_solid)
-        || place_meeting(x + _push_dir, y, obj_door_key)
-        || place_meeting(x + _push_dir, y, obj_door_final))) {
-            _box_blocked = true;
+        // Blocked: slope assist — step the box up terrain ramps, but only on
+        // solid-only contact with the player path free (never climb boxes,
+        // doors, foes, and never drag the player into a wall).
+        if (!_solid_hit || _door_hit || _box_hit || _foe_hit || _player_hit) break;
+        var _brise = 0;
+        mask_index = spr_pushable;
+        while (_brise < slope_max && place_meeting(_box.x + _push_dir, _box.y - _brise, obj_solid)) _brise++;
+        mask_index = _keep_mask;
+        if (_brise <= 0 || _brise >= slope_max) break;
+        // Raised cell must be free of EVERYTHING: re-verify terrain there,
+        // plus an extents check so a stack waiting above stops the climb
+        // instead of letting the box rise into it.
+        var _ux = _box.x + _push_dir;
+        var _uy = _box.y - _brise;
+        mask_index = spr_pushable;
+        var _up_clear = !place_meeting(_ux, _uy, obj_solid)
+            && !place_meeting(_ux, _uy, obj_door_key)
+            && !place_meeting(_ux, _uy, obj_door_final)
+            && (!instance_exists(obj_enemy) || instance_place(_ux, _uy, obj_enemy) == noone);
+        mask_index = _keep_mask;
+        var _up_box = false;
+        for (var _bux = 0; _bux < _bcount; _bux++) {
+            var _bup = instance_find(obj_pushable, _bux);
+            if (_bup == _box) continue;
+            if (_ux - 24 * _box.image_xscale < _bup.x + 24 * _bup.image_xscale
+            && _ux + 24 * _box.image_xscale > _bup.x - 24 * _bup.image_xscale
+            && _uy - 48 * _box.image_yscale < _bup.y
+            && _uy > _bup.y - 48 * _bup.image_yscale) { _up_box = true; break; }
         }
-        if (_box_blocked) break;
+        if (!_up_clear || _up_box) break;
         _box.x += _push_dir;
+        _box.y -= _brise;
         x += _push_dir;
         _moved += 1;
     }
+    mask_index = _keep_mask; // safety: never leave the step on the box mask
     if (_moved < _steps) {
         // Blocked partway: snap player to contact edge and stop leftover motion
         while (!place_meeting(x + _push_dir, y, obj_pushable)
@@ -144,6 +212,26 @@ if (place_meeting(x, y + vsp, obj_solid)
     vsp = 0;
 }
 y += vsp;
+
+// Slope-down snap: stay glued descending ramps so grounding (and jump)
+// never flickers. Only when grounded before, falling now (not jumping),
+// and actually moving — a real fall past slope_max keeps falling.
+if (_was_grounded && vsp >= 0 && _move != 0
+&& !place_meeting(x, y + 1, obj_solid)
+&& !place_meeting(x, y + 1, obj_pushable)
+&& !place_meeting(x, y + 1, obj_door_key)
+&& !place_meeting(x, y + 1, obj_door_final)) {
+    var _drop = 0;
+    while (_drop < slope_max
+    && !place_meeting(x, y + _drop + 1, obj_solid)
+    && !place_meeting(x, y + _drop + 1, obj_pushable)
+    && !place_meeting(x, y + _drop + 1, obj_door_key)
+    && !place_meeting(x, y + _drop + 1, obj_door_final)) _drop++;
+    if (_drop < slope_max) {
+        y += _drop;
+        vsp = 0;
+    }
+}
 
 // Grounded jump (from ground, box or closed door top)
 if (jump_key_pressed && (place_meeting(x, y + 1, obj_solid)

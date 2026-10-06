@@ -21,6 +21,7 @@ dark_surf = -1;
 
 emitters = [
     [obj_player,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
+    [obj_drawer,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
     [obj_enemy,       100, c_red,                          0.55, 0.30, -24],
     [obj_key,          60, c_yellow,                       0.60, 0.00,  -8],
     [obj_paper,        60, make_colour_rgb(200, 220, 255), 0.60, 0.00,  -8],

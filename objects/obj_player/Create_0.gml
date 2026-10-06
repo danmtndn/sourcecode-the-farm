@@ -3,6 +3,7 @@
 move_speed = 3;
 jump_speed = -11;
 grav = 0.6;
+slope_max = 6; // max pixels to step up/down slopes per frame (45deg needs ~move_speed)
 hsp = 0;
 vsp = 0;
 max_hp = 3;

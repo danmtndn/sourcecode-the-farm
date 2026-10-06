@@ -37,3 +37,24 @@ if (instance_exists(obj_enemy) && place_meeting(x, y, obj_enemy)) {
         _m += 1;
     }
 }
+// Never overlap another box (e.g. overlapping placements at room start):
+// settle upward onto it when headroom allows, else sidestep away from it.
+if (place_meeting(x, y, obj_pushable)) {
+    var _up2 = 0;
+    while (place_meeting(x, y, obj_pushable) && _up2 < 64) {
+        if (!place_meeting(x, y - 1, obj_solid) && !place_meeting(x, y - 1, obj_pushable)) y -= 1;
+        else break;
+        _up2 += 1;
+    }
+    var _away = 1;
+    var _bo2 = instance_place(x, y, obj_pushable);
+    if (_bo2 != noone && _bo2 != id) _away = sign(x - _bo2.x);
+    if (_away == 0) _away = 1;
+    var _side2 = 0;
+    while (place_meeting(x, y, obj_pushable) && _side2 < 64) {
+        if (!place_meeting(x + _away, y, obj_solid) && !place_meeting(x + _away, y, obj_pushable)
+        && !place_meeting(x + _away, y, obj_door_key) && !place_meeting(x + _away, y, obj_door_final)) x += _away;
+        else break;
+        _side2 += 1;
+    }
+}

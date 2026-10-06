@@ -4,6 +4,7 @@
 patrol_speed = 1.5;
 chase_speed = 2.8;
 grav = 0.6;
+slope_max = 6; // max pixels to step up/down slopes per frame
 hsp_enemy = 0;
 vsp = 0;
 move_dir = 1;
