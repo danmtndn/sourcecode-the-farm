@@ -49,6 +49,7 @@
     {"id":{"name":"obj_pushable","path":"objects/obj_pushable/obj_pushable.yy",},},
     {"id":{"name":"obj_solid","path":"objects/obj_solid/obj_solid.yy",},},
     {"id":{"name":"rm_level_1","path":"rooms/rm_level_1/rm_level_1.yy",},},
+    {"id":{"name":"rm_level_2","path":"rooms/rm_level_2/rm_level_2.yy",},},
     {"id":{"name":"spr_player","path":"sprites/spr_player/spr_player.yy",},},
     {"id":{"name":"spr_solid","path":"sprites/spr_solid/spr_solid.yy",},},
   ],
@@ -56,6 +57,7 @@
   "resourceVersion":"2.0",
   "RoomOrderNodes":[
     {"roomId":{"name":"rm_level_1","path":"rooms/rm_level_1/rm_level_1.yy",},},
+    {"roomId":{"name":"rm_level_2","path":"rooms/rm_level_2/rm_level_2.yy",},},
   ],
   "templateType":"game",
   "TextureGroups":[

@@ -16,8 +16,14 @@ if (instance_exists(obj_game)) {
     if (obj_game.state != "play") {
         hsp = 0;
         vsp += grav;
-        if (place_meeting(x, y + vsp, obj_solid)) {
-            while (!place_meeting(x, y + sign(vsp), obj_solid)) y += sign(vsp);
+        if (place_meeting(x, y + vsp, obj_solid)
+        || place_meeting(x, y + vsp, obj_pushable)
+        || place_meeting(x, y + vsp, obj_door_key)
+        || place_meeting(x, y + vsp, obj_door_final)) {
+            while (!place_meeting(x, y + sign(vsp), obj_solid)
+            && !place_meeting(x, y + sign(vsp), obj_pushable)
+            && !place_meeting(x, y + sign(vsp), obj_door_key)
+            && !place_meeting(x, y + sign(vsp), obj_door_final)) y += sign(vsp);
             vsp = 0;
         }
         y += vsp;
@@ -32,54 +38,106 @@ if (_move != 0) face = _move;
 hsp = _move * move_speed;
 vsp += grav;
 
-// Horizontal collide (walls + pushable boxes)
-if (place_meeting(x + hsp, y, obj_solid)) {
-    while (!place_meeting(x + sign(hsp), y, obj_solid)) x += sign(hsp);
+// Horizontal collide (walls + closed doors are solid)
+if (place_meeting(x + hsp, y, obj_solid)
+|| place_meeting(x + hsp, y, obj_door_key)
+|| place_meeting(x + hsp, y, obj_door_final)) {
+    while (!place_meeting(x + sign(hsp), y, obj_solid)
+    && !place_meeting(x + sign(hsp), y, obj_door_key)
+    && !place_meeting(x + sign(hsp), y, obj_door_final)) x += sign(hsp);
     hsp = 0;
 }
 
-// Pushable: if walking into box and box can move, move box same amount.
-// Else stop player at box edge.
+// Pushable: pixel-step push so neither player nor box can tunnel/clip.
+// Box is blocked by walls, other boxes, closed doors and the enemy (heavy, never pushed).
 var _box = instance_place(x + hsp, y, obj_pushable);
 if (_box != noone && hsp != 0) {
     var _push_dir = sign(hsp);
-    var _box_can_move = true;
-    // Would box hit a wall at its destination? (checked from player scope;
-    // masks are same placeholder sprite, so result matches box mask)
-    if (place_meeting(_box.x + hsp, _box.y, obj_solid)) _box_can_move = false;
-    // Would box hit another box?
-    if (_box_can_move) {
-        var _hit2 = instance_place(_box.x + hsp, _box.y, obj_pushable);
-        if (_hit2 != noone && _hit2 != _box) _box_can_move = false;
+    var _steps = abs(hsp);
+    var _moved = 0;
+    for (var _i = 0; _i < _steps; _i++) {
+        // Would box hit something at its next pixel? (checked from player scope;
+        // masks are same placeholder sprite, so result matches box mask)
+        var _box_blocked = false;
+        if (place_meeting(_box.x + _push_dir, _box.y, obj_solid)) _box_blocked = true;
+        if (! _box_blocked && place_meeting(_box.x + _push_dir, _box.y, obj_door_key)) _box_blocked = true;
+        if (! _box_blocked && place_meeting(_box.x + _push_dir, _box.y, obj_door_final)) _box_blocked = true;
+        if (!_box_blocked) {
+            var _hit2 = instance_place(_box.x + _push_dir, _box.y, obj_pushable);
+            if (_hit2 != noone && _hit2 != _box) _box_blocked = true;
+        }
+        // Never shove the box into the enemy (would embed enemy inside box).
+        if (!_box_blocked && instance_exists(obj_enemy)) {
+            var _hitE = instance_place(_box.x + _push_dir, _box.y, obj_enemy);
+            if (_hitE != noone) _box_blocked = true;
+        }
+        // Would player hit a wall/door at ITS next pixel?
+        if (!_box_blocked
+        && (place_meeting(x + _push_dir, y, obj_solid)
+        || place_meeting(x + _push_dir, y, obj_door_key)
+        || place_meeting(x + _push_dir, y, obj_door_final))) {
+            _box_blocked = true;
+        }
+        if (_box_blocked) break;
+        _box.x += _push_dir;
+        x += _push_dir;
+        _moved += 1;
     }
-    if (_box_can_move) {
-        _box.x += hsp; // same speed as player so they stay together
-    } else {
-        // Blocked: snap player to contact edge and stop
+    if (_moved < _steps) {
+        // Blocked partway: snap player to contact edge and stop leftover motion
         while (!place_meeting(x + _push_dir, y, obj_pushable)
         && !place_meeting(x + _push_dir, y, obj_solid)
+        && !place_meeting(x + _push_dir, y, obj_door_key)
+        && !place_meeting(x + _push_dir, y, obj_door_final)
         && abs(x - _box.x) > 1) {
             x += _push_dir;
             if (abs(x) > room_width + 1000) break;
         }
-        hsp = 0;
     }
+    hsp = 0; // horizontal motion already applied pixel-by-pixel above
 }
 
 x += hsp;
 
-// Vertical collide (stand on both ground AND boxes so pushable works as platform)
-if (place_meeting(x, y + vsp, obj_solid) || place_meeting(x, y + vsp, obj_pushable)) {
+// Depenetration: if we somehow start overlapped with a box (box fell on us,
+// respawn, room start), push out vertically first, then horizontally.
+if (place_meeting(x, y, obj_pushable)) {
+    var _up = 0;
+    while (place_meeting(x, y, obj_pushable) && _up < 64) {
+        if (!place_meeting(x, y - 1, obj_solid) && !place_meeting(x, y - 1, obj_pushable)) y -= 1;
+        else break;
+        _up += 1;
+    }
+    var _side = 0;
+    while (place_meeting(x, y, obj_pushable) && _side < 64) {
+        var _dir = (face != 0) ? -sign(face) : 1;
+        if (_dir == 0) _dir = 1;
+        if (!place_meeting(x + _dir, y, obj_solid) && !place_meeting(x + _dir, y, obj_pushable)) x += _dir;
+        else break;
+        _side += 1;
+    }
+}
+
+// Vertical collide (stand on ground AND boxes AND closed door tops)
+if (place_meeting(x, y + vsp, obj_solid)
+|| place_meeting(x, y + vsp, obj_pushable)
+|| place_meeting(x, y + vsp, obj_door_key)
+|| place_meeting(x, y + vsp, obj_door_final)) {
     while (!place_meeting(x, y + sign(vsp), obj_solid)
-    && !place_meeting(x, y + sign(vsp), obj_pushable)) {
+    && !place_meeting(x, y + sign(vsp), obj_pushable)
+    && !place_meeting(x, y + sign(vsp), obj_door_key)
+    && !place_meeting(x, y + sign(vsp), obj_door_final)) {
         y += sign(vsp);
     }
     vsp = 0;
 }
 y += vsp;
 
-// Grounded jump (from ground or box)
-if (jump_key_pressed && (place_meeting(x, y + 1, obj_solid) || place_meeting(x, y + 1, obj_pushable))) {
+// Grounded jump (from ground, box or closed door top)
+if (jump_key_pressed && (place_meeting(x, y + 1, obj_solid)
+|| place_meeting(x, y + 1, obj_pushable)
+|| place_meeting(x, y + 1, obj_door_key)
+|| place_meeting(x, y + 1, obj_door_final))) {
     vsp = jump_speed;
 }
 
