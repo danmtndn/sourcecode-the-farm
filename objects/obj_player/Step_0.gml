@@ -33,7 +33,14 @@ if (instance_exists(obj_game)) {
 }
 
 var _move = (right_key ? 1 : 0) - (left_key ? 1 : 0);
-if (_move != 0) face = _move;
+if (_move != 0) {
+	face = _move;
+	image_xscale = face;
+}
+
+// Reset each step; set to true below only when a box is actually engaged.
+// (Sprite is picked at the end of the step so this flag is always fresh.)
+pushing = false;
 
 hsp = _move * move_speed;
 vsp += grav;
@@ -52,6 +59,7 @@ if (place_meeting(x + hsp, y, obj_solid)
 // Box is blocked by walls, other boxes, closed doors and the enemy (heavy, never pushed).
 var _box = instance_place(x + hsp, y, obj_pushable);
 if (_box != noone && hsp != 0) {
+    pushing = true; // engaged with a box (even if it ends up blocked)
     var _push_dir = sign(hsp);
     var _steps = abs(hsp);
     var _moved = 0;
@@ -139,6 +147,21 @@ if (jump_key_pressed && (place_meeting(x, y + 1, obj_solid)
 || place_meeting(x, y + 1, obj_door_key)
 || place_meeting(x, y + 1, obj_door_final))) {
     vsp = jump_speed;
+}
+
+// Animation: jump while airborne, push while shoving a box, walk/idle grounded.
+// Evaluated after movement so `pushing` reflects this frame's actual push.
+var _grounded_now = (place_meeting(x, y + 1, obj_solid)
+|| place_meeting(x, y + 1, obj_pushable)
+|| place_meeting(x, y + 1, obj_door_key)
+|| place_meeting(x, y + 1, obj_door_final));
+var _want = spr_player_idle;
+if (!_grounded_now) _want = spr_player_jump;
+else if (pushing && _move != 0) _want = spr_player_push;
+else if (_move != 0) _want = spr_player_walk;
+if (sprite_index != _want) {
+    sprite_index = _want;
+    image_index = 0; // restart the new animation from its first frame
 }
 
 // Fell out of room

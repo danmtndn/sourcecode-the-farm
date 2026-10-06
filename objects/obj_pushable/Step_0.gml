@@ -1,6 +1,8 @@
 // obj_pushable - Step: gravity only (player pushes it in obj_player)
 // Custom vsp only, no built-ins. Lands on walls, other boxes, closed doors
 // AND enemies so boxes stack / rest on heads instead of falling through.
+// Frozen while paused.
+if (instance_exists(obj_game) && obj_game.state == "pause") exit;
 if (!variable_instance_exists(id, "vsp")) vsp = 0;
 vsp += grav;
 if (place_meeting(x, y + vsp, obj_solid)

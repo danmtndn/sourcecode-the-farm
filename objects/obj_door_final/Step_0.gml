@@ -10,6 +10,16 @@ if (_near && keyboard_check_pressed(ord("E")) && global.code_found != "") {
 }
 
 if (typing) {
+    // Numbers only: strip anything that isn't 0-9 and cap to code length.
+    var _raw = keyboard_string;
+    var _clean = "";
+    for (var _i = 1; _i <= string_length(_raw); _i++) {
+        var _o = ord(string_char_at(_raw, _i));
+        if (_o >= 48 && _o <= 57) _clean += chr(_o);
+    }
+    var _maxlen = max(1, string_length(global.final_code));
+    if (string_length(_clean) > _maxlen) _clean = string_copy(_clean, 1, _maxlen);
+    keyboard_string = _clean;
     if (keyboard_check_pressed(vk_enter)) {
         if (keyboard_string == global.final_code) {
             opened = true;

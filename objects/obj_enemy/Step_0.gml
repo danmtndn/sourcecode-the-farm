@@ -4,6 +4,9 @@ if (!variable_instance_exists(id, "vsp")) vsp = 0;
 if (!variable_instance_exists(id, "move_dir")) move_dir = 1;
 if (!variable_instance_exists(id, "hsp_enemy")) hsp_enemy = 0;
 
+// Freeze while paused (patrol would otherwise continue behind the pause panel).
+if (instance_exists(obj_game) && obj_game.state == "pause") exit;
+
 if (touch_cd > 0) touch_cd -= 1;
 vsp += grav;
 

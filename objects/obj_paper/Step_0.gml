@@ -1,5 +1,6 @@
 // obj_paper - Step: throw physics (set by obj_drawer) + E to read
-// Custom hsp/vsp only, no built-ins.
+// Custom hsp/vsp only, no built-ins. Frozen while paused.
+if (instance_exists(obj_game) && obj_game.state == "pause") exit;
 if (!variable_instance_exists(id, "hsp")) hsp = 0;
 if (!variable_instance_exists(id, "vsp")) vsp = 0;
 if (!variable_instance_exists(id, "grav")) grav = 0.6;
