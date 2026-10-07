@@ -23,7 +23,7 @@ emitters = [
     [obj_drawer,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
 	//[obj_pushable,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
 	[obj_door_key,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
-    [obj_door_final,      180, make_colour_rgb(255, 170, 80),  0.65, 0.35, -32],
+    [obj_door_final,      150, make_colour_rgb(255, 170, 80),  0.50, 0.35, -32],
     [obj_enemy,       100, c_red,                          0.55, 0.30, -24],
     [obj_key,          60, c_yellow,                       0.60, 0.00,  -8],
     [obj_paper,        60, make_colour_rgb(200, 220, 255), 0.60, 0.00,  -8],

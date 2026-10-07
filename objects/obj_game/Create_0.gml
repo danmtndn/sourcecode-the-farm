@@ -3,6 +3,10 @@
 // the controller would stack duplicates (double HUD, double intro input, the
 // handoff fighting itself). The newcomer yields before touching any globals.
 if (instance_number(obj_game) > 1) { instance_destroy(); exit; }
+// Draw above the vignette: obj_game was born on a deep room layer while
+// obj_glow was born at depth 0, so without this the fullscreen vignette
+// composites over the HUD (darkest exactly in the HUD corners).
+depth = -100;
 // Story: Reese crashes near a remote farm, is drugged and locked in a cell,
 // then must escape the underground by finding keys and clues while hiding
 // from the family. No weapons in this game. Edit text below to change story.

@@ -17,7 +17,10 @@ var _heart_oy = sprite_get_yoffset(spr_heart) * _heart_scale;
 for (var i = 0; i < global.max_hp; i++) {
     var _hx = 24 + i * 72;
     var _hy = 16;
-    if (i < global.hp) draw_sprite_ext(spr_heart, _heart_frame, _hx + _heart_ox, _hy + _heart_oy, _heart_scale, _heart_scale, 0, c_white, 1);
+    if (i < global.hp) {
+        draw_sprite_ext(spr_heart, _heart_frame, _hx + _heart_ox + 2, _hy + _heart_oy + 2, _heart_scale, _heart_scale, 0, c_black, 0.8);
+        draw_sprite_ext(spr_heart, _heart_frame, _hx + _heart_ox, _hy + _heart_oy, _heart_scale, _heart_scale, 0, c_white, 1);
+    }
     else draw_sprite_ext(spr_heart, 0, _hx + _heart_ox, _hy + _heart_oy, _heart_scale, _heart_scale, 0, c_dkgray, 0.45);
 }
 // Top-right cluster: item sprites with labels on the left, [ESC] pause rightmost.
@@ -41,10 +44,6 @@ if (state == "play") {
     var _total = _key_iw + 8 + _key_w + _gap + (_has_clue ? (_clue_iw + 8 + _clue_w + _gap) : 0) + _pause_w;
     var _sx = _gw - 24 - _total;
     var _cy = 44;
-    draw_set_alpha(0.55);
-    draw_set_color(c_black);
-    draw_rectangle(_sx - 8, _cy - _row_h / 2, _gw - 24 + 8, _cy + _row_h / 2, false);
-    draw_set_alpha(1);
     var _dx = _sx;
     draw_sprite_ext(spr_key, (current_time div 100) mod max(1, sprite_get_number(spr_key)), _dx + sprite_get_xoffset(spr_key) * _key_s, _cy - 24 + sprite_get_yoffset(spr_key) * _key_s, _key_s, _key_s, 0, c_white, 1);
     _dx += _key_iw + 8;
@@ -66,174 +65,6 @@ if (state == "play") {
 }
 }
 
-// World input prompts, drawn in GUI space above the room filter and night
-// map (world-space pills sat underneath both and read as dimmed). Same
-// texts and ranges as before, only the draw space moved. Pills keep a fixed
-// GUI size so they stay readable at any camera zoom.
-if (state == "play" && instance_exists(obj_player)) {
-    var _cam = view_camera[0];
-    var _vvx = 0;
-    var _vvy = 0;
-    var _vvw = room_width;
-    var _vvh = room_height;
-    if (_cam != -1 && camera_get_view_width(_cam) > 0 && camera_get_view_height(_cam) > 0) {
-        _vvx = camera_get_view_x(_cam);
-        _vvy = camera_get_view_y(_cam);
-        _vvw = camera_get_view_width(_cam);
-        _vvh = camera_get_view_height(_cam);
-    }
-    var _psx = _gw / max(1, _vvw);
-    var _psy = _gh / max(1, _vvh);
-    draw_set_font(fnt_body);
-    draw_set_halign(fa_center);
-    draw_set_valign(fa_top);
-    // Key pickup
-    var _nkey = instance_number(obj_key);
-    for (var _ik = 0; _ik < _nkey; _ik++) {
-        var _ok = instance_find(obj_key, _ik);
-        if (!instance_exists(_ok)) continue;
-        if (point_distance(_ok.x, _ok.y, obj_player.x, obj_player.y) >= 72) continue;
-        var _p1x = (((_ok.bbox_left + _ok.bbox_right) / 2) - _vvx) * _psx;
-        var _p1y = (_ok.bbox_top - _vvy) * _psy;
-        var _t1 = "Key [E]";
-        var _w1 = string_width(_t1);
-        var _h1 = string_height(_t1);
-        draw_set_alpha(0.65);
-        draw_set_color(c_black);
-        draw_rectangle(_p1x - _w1 / 2 - 6, _p1y - _h1 - 14, _p1x + _w1 / 2 + 6, _p1y - 8, false);
-        draw_set_alpha(1);
-        draw_set_color(c_white);
-        draw_text(_p1x, _p1y - _h1 - 12, _t1);
-    }
-    // Paper note
-    var _npa = instance_number(obj_paper);
-    for (var _ip = 0; _ip < _npa; _ip++) {
-        var _op = instance_find(obj_paper, _ip);
-        if (!instance_exists(_op)) continue;
-        if (point_distance(_op.x, _op.y, obj_player.x, obj_player.y) >= 72) continue;
-        var _p2x = (((_op.bbox_left + _op.bbox_right) / 2) - _vvx) * _psx;
-        var _p2y = (_op.bbox_top - _vvy) * _psy;
-        var _t2 = "Read [E]";
-        var _w2 = string_width(_t2);
-        var _h2 = string_height(_t2);
-        draw_set_alpha(0.65);
-        draw_set_color(c_black);
-        draw_rectangle(_p2x - _w2 / 2 - 6, _p2y - _h2 - 14, _p2x + _w2 / 2 + 6, _p2y - 8, false);
-        draw_set_alpha(1);
-        draw_set_color(c_white);
-        draw_text(_p2x, _p2y - _h2 - 12, _t2);
-    }
-    // Hidden item
-    var _nhi = instance_number(obj_hidden_item);
-    for (var _ih = 0; _ih < _nhi; _ih++) {
-        var _oh = instance_find(obj_hidden_item, _ih);
-        if (!instance_exists(_oh)) continue;
-        if (point_distance(_oh.x, _oh.y, obj_player.x, obj_player.y) >= 56) continue;
-        var _p3x = (((_oh.bbox_left + _oh.bbox_right) / 2) - _vvx) * _psx;
-        var _p3y = (_oh.bbox_top - _vvy) * _psy;
-        var _t3 = "Take [E]";
-        var _w3 = string_width(_t3);
-        var _h3 = string_height(_t3);
-        draw_set_alpha(0.65);
-        draw_set_color(c_black);
-        draw_rectangle(_p3x - _w3 / 2 - 6, _p3y - _h3 - 14, _p3x + _w3 / 2 + 6, _p3y - 8, false);
-        draw_set_alpha(1);
-        draw_set_color(c_white);
-        draw_text(_p3x, _p3y - _h3 - 12, _t3);
-    }
-    // Drawer
-    var _ndr = instance_number(obj_drawer);
-    for (var _idr = 0; _idr < _ndr; _idr++) {
-        var _od = instance_find(obj_drawer, _idr);
-        if (!instance_exists(_od) || _od.opened) continue;
-        if (point_distance(_od.x, _od.y, obj_player.x, obj_player.y) >= 80) continue;
-        var _p4x = (((_od.bbox_left + _od.bbox_right) / 2) - _vvx) * _psx;
-        var _p4y = (_od.bbox_top - _vvy) * _psy;
-        var _t4 = "Open [E]";
-        var _w4 = string_width(_t4);
-        var _h4 = string_height(_t4);
-        draw_set_alpha(0.65);
-        draw_set_color(c_black);
-        draw_rectangle(_p4x - _w4 / 2 - 6, _p4y - _h4 - 14, _p4x + _w4 / 2 + 6, _p4y - 8, false);
-        draw_set_alpha(1);
-        draw_set_color(c_white);
-        draw_text(_p4x, _p4y - _h4 - 12, _t4);
-    }
-    // Key door
-    var _ndk = instance_number(obj_door_key);
-    for (var _ik2 = 0; _ik2 < _ndk; _ik2++) {
-        var _ok2 = instance_find(obj_door_key, _ik2);
-        if (!instance_exists(_ok2) || _ok2.opened) continue;
-        if (point_distance(_ok2.x, _ok2.y, obj_player.x, obj_player.y) >= 96) continue;
-        var _p5x = (((_ok2.bbox_left + _ok2.bbox_right) / 2) - _vvx) * _psx;
-        var _p5y = (_ok2.bbox_top - _vvy) * _psy;
-        var _t5 = (global.has_key > 0) ? "Open [E]" : "Locked. Need key.";
-        var _w5 = string_width(_t5);
-        var _h5 = string_height(_t5);
-        draw_set_alpha(0.65);
-        draw_set_color(c_black);
-        draw_rectangle(_p5x - _w5 / 2 - 6, _p5y - _h5 - 14, _p5x + _w5 / 2 + 6, _p5y - 8, false);
-        draw_set_alpha(1);
-        draw_set_color(c_white);
-        draw_text(_p5x, _p5y - _h5 - 12, _t5);
-    }
-    // Final door: halo plus contextual prompt
-    var _ndf = instance_number(obj_door_final);
-    for (var _ifd = 0; _ifd < _ndf; _ifd++) {
-        var _of = instance_find(obj_door_final, _ifd);
-        if (!instance_exists(_of) || _of.opened) continue;
-        var _fgx = (((_of.bbox_left + _of.bbox_right) / 2) - _vvx) * _psx;
-        var _fgy = (((_of.bbox_top + _of.bbox_bottom) / 2) - _vvy) * _psy;
-        var _hsx = 0.9 * _psx;
-        var _hsy = 0.9 * _psy;
-        var _hlx = _fgx + (sprite_get_xoffset(spr_light) - sprite_get_width(spr_light) / 2) * _hsx;
-        var _hly = _fgy + (sprite_get_yoffset(spr_light) - sprite_get_height(spr_light) / 2) * _hsy;
-        var _pulse = 0.30 + 0.15 * (0.5 + 0.5 * sin(current_time / 300));
-        gpu_set_blendmode(bm_add);
-        draw_set_alpha(_pulse);
-        draw_sprite_ext(spr_light, 0, _hlx, _hly, _hsx, _hsy, 0, c_white, 1);
-        draw_set_alpha(1);
-        gpu_set_blendmode(bm_normal);
-        var _near = point_distance(_of.x, _of.y, obj_player.x, obj_player.y) < 110;
-        if (_of.typing || _near) {
-            var _t6 = "";
-            if (global.code_found == "") _t6 = "Locked. Find note.";
-            else if (!_of.typing) _t6 = "Open [E]";
-            else _t6 = "Code: " + keyboard_string + "_";
-            var _ftop = (_of.bbox_top - _vvy) * _psy;
-            var _w6 = string_width(_t6);
-            var _h6 = string_height(_t6);
-            draw_set_alpha(0.65);
-            draw_set_color(c_black);
-            draw_rectangle(_fgx - _w6 / 2 - 6, _ftop - _h6 - 14, _fgx + _w6 / 2 + 6, _ftop - 8, false);
-            draw_set_alpha(1);
-            draw_set_color(c_white);
-            draw_text(_fgx, _ftop - _h6 - 12, _t6);
-        }
-    }
-    // Exit
-    var _nex = instance_number(obj_exit);
-    for (var _iex = 0; _iex < _nex; _iex++) {
-        var _oe = instance_find(obj_exit, _iex);
-        if (!instance_exists(_oe)) continue;
-        if (point_distance(_oe.x, _oe.y, obj_player.x, obj_player.y) >= 80) continue;
-        var _p7x = (((_oe.bbox_left + _oe.bbox_right) / 2) - _vvx) * _psx;
-        var _p7y = (_oe.bbox_top - _vvy) * _psy;
-        var _t7 = "Escape";
-        var _w7 = string_width(_t7);
-        var _h7 = string_height(_t7);
-        draw_set_alpha(0.65);
-        draw_set_color(c_black);
-        draw_rectangle(_p7x - _w7 / 2 - 6, _p7y - _h7 - 14, _p7x + _w7 / 2 + 6, _p7y - 8, false);
-        draw_set_alpha(1);
-        draw_set_color(c_white);
-        draw_text(_p7x, _p7y - _h7 - 12, _t7);
-    }
-    draw_set_halign(fa_left);
-    draw_set_valign(fa_top);
-    draw_set_alpha(1);
-    draw_set_color(c_white);
-}
 
 // Zoomed paper overlay: N toggles, code drawn ON the paper
 if (global.note_open && global.code_found != "") {
