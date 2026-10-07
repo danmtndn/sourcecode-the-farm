@@ -1,36 +1,54 @@
 // obj_game - Create: global state, HP, inventory, achievements, intro/outro text
-// obj_game - Create: global state, HP, inventory, achievements, intro/outro text
-// EDIT THESE for your story. One intro card per level + one final outro.
-// Shown as a typewriter (see Step/Draw). ENTER completes the line first, then advances.
+// Singleton: persistent AND placed in every level room, so without this guard
+// the controller would stack duplicates (double HUD, double intro input, the
+// handoff fighting itself). The newcomer yields before touching any globals.
+if (instance_number(obj_game) > 1) { instance_destroy(); exit; }
+// Story: Reese crashes near a remote farm, is drugged and locked in a cell,
+// then must escape the underground by finding keys and clues while hiding
+// from the family. No weapons in this game. Edit text below to change story.
 intro_l1 = [
-    "THE FARM",
-    "You came back to the old farm after the letter...",
-    "Find what was left behind. Don't let it catch you.",
-    "Press ENTER to begin.  (A/D move, SPACE jump, E interact, P pause)"
+    "THE FARM - I. THE CRASH",
+    "Driving home on an isolated road, Reese swerves to avoid a dead animal and crashes off a bridge.",
+    "No signal. No passing cars. Only lights in the distance: a remote farmhouse.",
+    "The family takes him in. Warm dinner. Kind smiles. Then his vision blurs...",
+    "Press ENTER to begin. (A/D move, SPACE jump, E interact, N note, ESC pause)",
+    "They are waiting. Find a way out."
 ];
 intro_l2 = [
-    "THE BARN",
-    "The farmhouse gave up its key, but the barn stays shut.",
-    "Something moves between the shelves. Keep a box between you and it.",
-    "Press ENTER to begin."
+    "II. THE CELL",
+    "Reese wakes in a dark cell. Hours blur into days. Whispers behind the walls.",
+    "He watches and listens until one captor makes a mistake. A door left unlatched.",
+    "Now the underground spreads before him. Find keys. Find clues. Stay quiet. Hide.",
+    "Press ENTER to continue.",
+    "They are waiting. Find a way out."
+];
+intro_l3 = [
+    "III. THE SLAUGHTERHOUSE",
+    "Below the barn the air turns to iron and rot. Hooks. Chains. Ledgers of names.",
+    "The family does not farm animals. The carcass on the road was bait. A trap.",
+    "Unlock the final exit. Do not let them hear you.",
+    "Press ENTER to descend.",
+    "They are waiting. Find a way out."
 ];
 intro_default = [
     "THE FARM",
     "Press ENTER to begin."
 ];
 outro_lines = [
-    "You unlocked the barn and escaped.",
-    "But something still follows...",
+    "The final lock clicks. Cold night air. Reese runs and does not look back.",
+    "Behind him the farm lights go out one by one. The road is empty.",
+    "Somewhere an engine starts. The trap is reset for the next traveler.",
     "THE END - Thanks for playing."
 ];
 
 // Typewriter tuning: steps per revealed character (2 = ~30 chars/sec at 60fps).
 type_speed = 2;
 
-state = "intro"; // intro -> play -> pause -> dead / outro (plus menu in rm_menu)
+state = "intro"; // intro -> begin -> play -> pause -> dead / outro (plus menu in rm_menu)
 intro_index = 0;
 type_timer = 0;   // counts steps; visible chars = type_timer div type_speed
 outro_timer = 0;
+dead_cooldown = 0; // counts down on the death screen before R retry is accepted
 
 // Pause menu state. pause_settings=false shows Resume/Settings/Quit,
 // true shows the Music/SFX toggles.
@@ -38,11 +56,12 @@ pause_selected = 0;
 pause_settings = false;
 pause_options = ["Resume", "Settings", "Quit to Menu"];
 
-// Pick intro card for a room. EDIT: add a branch per level.
+// Pick intro card for a room. One card per level.
 story_for_room = function(_rm) {
     var _nm = room_get_name(_rm);
     if (_nm == "rm_level_1") return intro_l1;
     if (_nm == "rm_level_2") return intro_l2;
+    if (_nm == "rm_level_3") return intro_l3;
     return intro_default;
 };
 
@@ -55,13 +74,14 @@ global.has_key = 0;          // keys for obj_door_key
 global.code_found = "";      // set by obj_paper, e.g. "4821"
 global.final_code = "4821";  // EDIT: code for final door
 global.note_open = false;     // N toggles zoomed paper overlay
-global.note_sprite = spr_player_walk; // EDIT: swap to your spr_paper_zoom when ready
+global.note_sprite = spr_paper_preview; // EDIT: swap to your spr_paper_zoom when ready
 global.damage_flash = 0;
 global.ach_hidden1 = false; // L1 secret (see obj_hidden_item Step)
 global.ach_hidden2 = false; // L2 secret
 global.ach_hidden3 = false; // L3 secret (needs an obj_hidden_item in rm_level_3)
 global.ach_level = false;
 global.ach_timer = 0;
+global.ach_title = "";
 global.ach_text = "";
 
 spawn_x = 128;
@@ -79,14 +99,20 @@ if (ini_key_exists("ach", "hidden3")) global.ach_hidden3 = ini_read_real("ach", 
 if (ini_key_exists("ach", "level")) global.ach_level = ini_read_real("ach", "level", 0) > 0.5;
 ini_close();
 
-// Audio ON/OFF settings, persisted. There are no sound assets in the project
-// yet, so these are gates: route all future sounds through play_sfx() for
-// effects and play_music() for looping tracks and the toggles apply.
+// Audio settings, persisted. No sound assets in the project yet, so these are
+// gates plus volume levels: route all future sounds through play_sfx() for
+// effects and play_music() for looping tracks.
 if (!variable_global_exists("music_on")) global.music_on = true;
 if (!variable_global_exists("sfx_on")) global.sfx_on = true;
+if (!variable_global_exists("music_vol")) global.music_vol = 0.8;
+if (!variable_global_exists("sfx_vol")) global.sfx_vol = 0.8;
+if (!variable_global_exists("master_vol")) global.master_vol = 1.0;
 ini_open("thefarm_save.ini");
 if (ini_key_exists("settings", "music")) global.music_on = ini_read_real("settings", "music", 1) > 0.5;
 if (ini_key_exists("settings", "sfx")) global.sfx_on = ini_read_real("settings", "sfx", 1) > 0.5;
+if (ini_key_exists("settings", "music_vol")) global.music_vol = clamp(ini_read_real("settings", "music_vol", 0.8), 0, 1);
+if (ini_key_exists("settings", "sfx_vol")) global.sfx_vol = clamp(ini_read_real("settings", "sfx_vol", 0.8), 0, 1);
+if (ini_key_exists("settings", "master_vol")) global.master_vol = clamp(ini_read_real("settings", "master_vol", 1), 0, 1);
 ini_close();
 music_track = -1; // currently looping track started via play_music(), if any
 
@@ -94,7 +120,38 @@ save_settings = function() {
     ini_open("thefarm_save.ini");
     ini_write_real("settings", "music", global.music_on ? 1 : 0);
     ini_write_real("settings", "sfx", global.sfx_on ? 1 : 0);
+    ini_write_real("settings", "music_vol", global.music_vol);
+    ini_write_real("settings", "sfx_vol", global.sfx_vol);
+    ini_write_real("settings", "master_vol", global.master_vol);
     ini_close();
+};
+
+apply_audio_volumes = function() {
+    // Master gain plus per-track gain. Safe to call with no assets loaded.
+    var _m = global.master_vol;
+    if (audio_group_is_loaded(audiogroup_default)) {
+        audio_group_set_gain(audiogroup_default, _m, 0);
+    }
+    if (music_track != -1) {
+        audio_sound_gain(music_track, global.music_on ? global.music_vol * _m : 0, 0);
+    }
+};
+
+set_music_vol = function(_v) {
+    global.music_vol = clamp(_v, 0, 1);
+    apply_audio_volumes();
+    save_settings();
+};
+
+set_sfx_vol = function(_v) {
+    global.sfx_vol = clamp(_v, 0, 1);
+    save_settings();
+};
+
+set_master_vol = function(_v) {
+    global.master_vol = clamp(_v, 0, 1);
+    apply_audio_volumes();
+    save_settings();
 };
 
 toggle_music = function() {
@@ -103,6 +160,7 @@ toggle_music = function() {
         if (audio_is_playing(music_track)) audio_stop_sound(music_track);
         music_track = -1;
     }
+    apply_audio_volumes();
     save_settings();
 };
 
@@ -111,34 +169,57 @@ toggle_sfx = function() {
     save_settings();
 };
 
-play_sfx = function(_snd) {
+play_sfx = function(_snd, _pitch) {
     if (!global.sfx_on) return -1;
-    return audio_play_sound(_snd, 10, false);
+    if (_pitch == undefined) _pitch = 1;
+    var _id = audio_play_sound(_snd, 10, false);
+    audio_sound_pitch(_id, _pitch);
+    audio_sound_gain(_id, global.sfx_vol * global.master_vol, 0);
+    return _id;
 };
 
 play_music = function(_snd) {
     if (!global.music_on) return -1;
     if (music_track != -1 && audio_is_playing(music_track)) audio_stop_sound(music_track);
     music_track = audio_play_sound(_snd, 1, true);
+    audio_sound_gain(music_track, global.music_vol * global.master_vol, 0);
     return music_track;
 };
 
+stop_music = function() {
+    if (music_track != -1) {
+        if (audio_is_playing(music_track)) audio_stop_sound(music_track);
+        music_track = -1;
+    }
+};
+
+stop_all_sfx = function() {
+    audio_stop_all();
+    music_track = -1;
+};
+
 take_damage = function(_dmg) {
+    if (variable_global_exists("transition_lock") && global.transition_lock) return;
     if (global.hp <= 0) return;
     if (instance_exists(obj_player) && obj_player.invuln > 0) return;
     global.hp -= _dmg;
     global.damage_flash = 30; // frames of red overlay
-    if (instance_exists(obj_player)) obj_player.invuln = 90;
+    // I-frames match the enemy attack cycle: windup 18 + recover 12 + 10 buffer.
+    // Enemy touch_cd is 60, so any re-windup strikes after these expire: every
+    // connected completed swing damages, broken-contact swings still whiff.
+    if (instance_exists(obj_player)) obj_player.invuln = 40;
     if (global.hp <= 0) {
         global.hp = 0;
         state = "dead";
+        dead_cooldown = 60; // steps before R retry is accepted
     }
 };
 
 unlock_achievement = function(_id, _label) {
     if (_id == "hidden1" && !global.ach_hidden1) {
         global.ach_hidden1 = true;
-        global.ach_text = "Achievement: " + _label;
+        global.ach_title = "SECRET FOUND";
+        global.ach_text = _label;
         global.ach_timer = 180;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "hidden1", 1);
@@ -146,7 +227,8 @@ unlock_achievement = function(_id, _label) {
     }
     if (_id == "hidden2" && !global.ach_hidden2) {
         global.ach_hidden2 = true;
-        global.ach_text = "Achievement: " + _label;
+        global.ach_title = "SECRET FOUND";
+        global.ach_text = _label;
         global.ach_timer = 180;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "hidden2", 1);
@@ -154,7 +236,8 @@ unlock_achievement = function(_id, _label) {
     }
     if (_id == "hidden3" && !global.ach_hidden3) {
         global.ach_hidden3 = true;
-        global.ach_text = "Achievement: " + _label;
+        global.ach_title = "SECRET FOUND";
+        global.ach_text = _label;
         global.ach_timer = 180;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "hidden3", 1);
@@ -162,7 +245,8 @@ unlock_achievement = function(_id, _label) {
     }
     if (_id == "level" && !global.ach_level) {
         global.ach_level = true;
-        global.ach_text = "Achievement: " + _label;
+        global.ach_title = "LEVEL CLEAR";
+        global.ach_text = _label;
         global.ach_timer = 180;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "level", 1);

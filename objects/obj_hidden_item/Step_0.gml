@@ -1,7 +1,7 @@
-// obj_hidden_item - Step: secret pickup -> that LEVEL's hidden achievement
+// obj_hidden_item - Step: secret pickup needs E like other items, no autopickup
 // (hidden1/2/3). Every level's secret is its own achievement.
 if (instance_exists(obj_player) && obj_game.state == "play") {
-    if (place_meeting(x, y, obj_player) || (point_distance(x, y, obj_player.x, obj_player.y) < 40 && keyboard_check_pressed(ord("E")))) {
+    if (point_distance(x, y, obj_player.x, obj_player.y) < 48 && keyboard_check_pressed(ord("E"))) {
         // EDIT labels per level (keep in sync with the menu list in obj_menu).
         var _aid = "hidden1";
         var _alabel = "Farmhouse Secret";

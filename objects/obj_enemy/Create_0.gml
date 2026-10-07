@@ -30,6 +30,38 @@ grounded_prev = true; // grounded state last step (takeoff/landing edges)
 // this the hitbox would grow/shrink on every sprite swap and snag.
 // (Same approach as the player's idle mask pin.) Visuals use sprite_index.
 mask_index = spr_enemy_run;
+// Variant look: 0 = spr_enemy_* set, 1 = spr_enemy2_* set. Same stats.
+// Set variant via Creation Code or by the spawner; the sprite set applies
+// lazily in Step (see applied_variant) since those run after Create.
+variant = 0;
+applied_variant = -1;
+spr_idle = spr_enemy_idle;
+spr_run = spr_enemy_run;
+spr_jump = spr_enemy_jump;
+spr_attack = spr_enemy_attack;
+apply_variant = function() {
+    if (variant == 1) {
+        spr_idle = spr_enemy2_idle;
+        spr_run = spr_enemy2_run;
+        spr_jump = spr_enemy2_jump;
+        spr_attack = spr_enemy2_attack;
+        // Enemy2 is a little faster. Windup/recover/touch_cd are unchanged,
+        // so the player invuln alignment still holds. The player still
+        // outruns it sprinting (4.5 vs 3.5).
+        chase_speed = 3.5;
+        patrol_speed = 1.75;
+    } else {
+        spr_idle = spr_enemy_idle;
+        spr_run = spr_enemy_run;
+        spr_jump = spr_enemy_jump;
+        spr_attack = spr_enemy_attack;
+        chase_speed = 3;
+        patrol_speed = 1.5;
+    }
+    applied_variant = variant;
+    sprite_index = spr_idle;
+    mask_index = spr_run;
+};
 // Spawned-life cycle (driven by obj_spawner; direct placements ignore it).
 spawning = false;    // fading in: frozen and harmless
 despawning = false;  // fading out: frozen and harmless, then destroyed

@@ -1,4 +1,3 @@
+// obj_key - Draw: sprite only. The prompt draws in GUI (obj_game) so room
+// effects and darkness never dim it.
 draw_self();
-draw_set_color(c_yellow);
-draw_text(x - 16, y - 32, "KEY [E]");
-draw_set_color(c_white);

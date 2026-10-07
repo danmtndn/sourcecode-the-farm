@@ -3,8 +3,16 @@
 `obj_enemy/Create_0.gml`: `patrol_speed=1.5; chase_speed=3; jump_speed=-10`
 (clears boxes, not tall walls); `arrive_range=10; face_deadzone=2`;
 `touch_cd=0`; `slope_max=6`; anim timers + `grounded_prev`. Mask pinned to
-`spr_enemy_run`. Per-level `chase_range` (L1 240, L2 320, L3 400), patrol
+the active run sprite. Per-level `chase_range` (L1 240, L2 320, L3 400), patrol
 bounds via spawner `patrol_halfwidth` (was room Creation Code).
+Look variants: `variant` 0 = `spr_enemy_*` set (`chase 3`, `patrol 1.5`),
+1 = `spr_enemy2_*` set (`chase 3.5`, `patrol 1.75`, same windup/recover/damage),
+picked in `apply_variant()` and applied lazily in Step
+(Creation Code and spawner assignment run after Create). Both attack strips
+are 5 frames, so the windup/strike mapping holds for both sets.
+Placement (2 spawners per level, one variant each): L1 ground-mid (v0) +
+right (v1); L2 ground (v0) + ground-left (v1); L3 left (v1) + exit (v0).
+Spawner `spawn_variant` (Creation Code) picks the look per encounter.
 
 ## Senses
 - Rectangular vision, NOT a circle: `|dx| < chase_range` AND

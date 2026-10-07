@@ -1,4 +1,3 @@
+// obj_hidden_item - Draw: sprite only. The prompt draws in GUI (obj_game)
+// so room effects and darkness never dim it.
 draw_self();
-draw_set_color(c_fuchsia);
-draw_text(x - 28, y - 36, "SECRET [E]");
-draw_set_color(c_white);

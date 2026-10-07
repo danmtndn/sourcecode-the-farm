@@ -10,6 +10,7 @@ respawn_delay = 300;   // steps before it can trigger again after a despawn
 patrol_halfwidth = 160; // enemy patrols spawn_x +/- this (old x±160 default)
 chase_range = -1;      // -1 = keep the enemy default; else override it
 repeatable = true;     // false = spawn once per room visit
+spawn_variant = 0;     // enemy look: 0 = spr_enemy_* set, 1 = spr_enemy2_* set
 // Keep a hysteresis gap so the enemy can't flicker in/out at the boundary.
 if (despawn_range < spawn_range + 100) despawn_range = spawn_range + 100;
 // Live state (guarded again in Step so a stale Create can't break it).

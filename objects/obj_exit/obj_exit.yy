@@ -35,5 +35,5 @@
     "path":"sprites/spr_player_walk/spr_player_walk.yy",
   },
   "spriteMaskId":null,
-  "visible":true,
+  "visible":false,
 }

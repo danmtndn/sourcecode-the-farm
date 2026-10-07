@@ -1,6 +1,3 @@
+// obj_door_key - Draw: sprite only. The prompt draws in GUI (obj_game) so
+// room effects and darkness never dim it.
 draw_self();
-if (!opened) {
-    draw_set_color(c_orange);
-    draw_text(x - 32, y - 40, "DOOR needs KEY [E]");
-    draw_set_color(c_white);
-}

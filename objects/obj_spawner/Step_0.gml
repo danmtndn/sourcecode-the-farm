@@ -13,11 +13,14 @@ if (!variable_instance_exists(id, "repeatable")) repeatable = true;
 if (!variable_instance_exists(id, "trigger_delay")) trigger_delay = 45;
 if (!variable_instance_exists(id, "triggered")) triggered = false;
 if (!variable_instance_exists(id, "arm_timer")) arm_timer = 0;
+if (!variable_instance_exists(id, "spawn_variant")) spawn_variant = 0;
 
 // Freeze while paused; idle unless the run is actually playing.
 if (instance_exists(obj_game) && obj_game.state == "pause") exit;
 if (!instance_exists(obj_player) || !instance_exists(obj_game)) exit;
 if (obj_game.state != "play") exit;
+// No countdowns or spawns materialize mid-transition (fade covers the room).
+if (variable_global_exists("transition_lock") && global.transition_lock) exit;
 
 // Our enemy died or the room changed under us: forget it.
 if (child != noone && !instance_exists(child)) child = noone;
@@ -42,6 +45,7 @@ if (child == noone) {
         child.patrol_left = x - patrol_halfwidth;
         child.patrol_right = x + patrol_halfwidth;
         if (chase_range > 0) child.chase_range = chase_range;
+        child.variant = spawn_variant; // look only: same stats, enemy2 art if 1
         child.aggro = true; // step 4: chase the player from activation
         child.spawning = true; // fade-in handled by the enemy itself
         child.image_alpha = 0;

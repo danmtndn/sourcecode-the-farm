@@ -11,8 +11,15 @@ if (!variable_instance_exists(id, "air_timer")) air_timer = 0;
 if (!variable_instance_exists(id, "grounded_prev")) grounded_prev = true;
 if (!variable_instance_exists(id, "jump_speed")) jump_speed = -10;
 
+// Variant sprite set applies lazily: spawner assignment and Creation Code
+// both run after Create, so pick up the set on first sight (and on change).
+if (!variable_instance_exists(id, "applied_variant")) applied_variant = -1;
+if (!variable_instance_exists(id, "variant")) variant = 0;
+if (applied_variant != variant && variable_instance_exists(id, "apply_variant")) apply_variant();
 // Freeze while paused (patrol would otherwise continue behind the pause panel).
 if (instance_exists(obj_game) && obj_game.state == "pause") exit;
+// Freeze mid-transition: AI must not act behind a black fade (unfair hits).
+if (variable_global_exists("transition_lock") && global.transition_lock) exit;
 
 // Spawn-state guards (self-heal if Create didn't run first).
 if (!variable_instance_exists(id, "spawning")) spawning = false;
@@ -279,11 +286,11 @@ if (land_timer > 0) land_timer -= 1;
 var _e_air_end = image_number - 3; // last air frame, held on long falls
 var _e_land_a = image_number - 2; // landing beat, first frame
 var _e_land_b = image_number - 1; // landing beat, held crouch
-var _ewant = spr_enemy_run;
-if (attacking) _ewant = spr_enemy_attack;
-else if (!_eground_now) _ewant = spr_enemy_jump;
-else if (land_timer > 0) _ewant = spr_enemy_jump;
-else if (_idle_hold) _ewant = spr_enemy_idle;
+var _ewant = spr_run;
+if (attacking) _ewant = spr_attack;
+else if (!_eground_now) _ewant = spr_jump;
+else if (land_timer > 0) _ewant = spr_jump;
+else if (_idle_hold) _ewant = spr_idle;
 if (sprite_index != _ewant) {
     sprite_index = _ewant;
     image_index = 0;
@@ -291,11 +298,11 @@ if (sprite_index != _ewant) {
 // Takeoff frame from physics: jumped = crouch, walked off = airborne.
 // (Skipped while attacking: the swing owns its frames, see below.)
 if (_etook_off && !attacking) image_index = (vsp < 0) ? 0 : 2;
-if (_ewant == spr_enemy_attack) {
+if (_ewant == spr_attack) {
     // Windup frames 0-2, strike/recover 3-4 (5-frame strip).
     if (attack_t < attack_windup) image_index = min(floor(attack_t / max(1, attack_windup) * 3), 2);
     else image_index = min(3 + floor((attack_t - attack_windup) / max(1, attack_recover) * 2), 4);
-} else if (_ewant == spr_enemy_jump) {
+} else if (_ewant == spr_jump) {
     if (!_eground_now) {
         if (vsp < 0) image_index = min(image_index + 0.12, 2); // rise: crouch to air
         else if (image_index < _e_air_end) image_index = min(image_index + 0.3, _e_air_end); // fall: hold last air

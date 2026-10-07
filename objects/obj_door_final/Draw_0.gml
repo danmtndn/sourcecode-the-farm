@@ -1,8 +1,3 @@
+// obj_door_final - Draw: sprite only. Halo and prompt draw in GUI (obj_game)
+// so room effects and darkness never dim them.
 draw_self();
-if (!opened) {
-    draw_set_color(c_aqua);
-    if (global.code_found == "") draw_text(x - 48, y - 40, "FINAL DOOR: find NOTE");
-    else if (!typing) draw_text(x - 40, y - 40, "FINAL DOOR [E]");
-    else draw_text(x - 40, y - 40, "CODE: " + keyboard_string + "_");
-    draw_set_color(c_white);
-}
