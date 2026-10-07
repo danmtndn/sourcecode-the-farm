@@ -36,6 +36,11 @@ if (global.darkness_enabled && room != rm_menu) {
                     var _dh = k * 2.1 + j;
                     _da = _da * (1.0 - _d[4] * 0.35 * (0.5 + 0.5 * sin(current_time * 0.004 + _dh)));
                 }
+                // Holes follow the instance's own fade: a materializing or
+                // vanishing enemy punches a growing/shrinking hole, never a
+                // full-strength pool with no visible source. (image_alpha is
+                // 1 for everything not fading, so this is a no-op for them.)
+                _da *= _lite.image_alpha;
                 // Pools read a little wider than the table radius so the
                 // darkness boundary stays soft falloff, not an edge.
                 var _ds = _d[1] * 1.2 / _half;

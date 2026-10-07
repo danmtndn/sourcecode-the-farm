@@ -3,9 +3,36 @@
 if (!variable_instance_exists(id, "vsp")) vsp = 0;
 if (!variable_instance_exists(id, "move_dir")) move_dir = 1;
 if (!variable_instance_exists(id, "hsp_enemy")) hsp_enemy = 0;
+if (!variable_instance_exists(id, "arrive_range")) arrive_range = 10;
+if (!variable_instance_exists(id, "face_deadzone")) face_deadzone = 2;
+if (!variable_instance_exists(id, "land_timer")) land_timer = 0;
+if (!variable_instance_exists(id, "air_timer")) air_timer = 0;
+if (!variable_instance_exists(id, "grounded_prev")) grounded_prev = true;
+if (!variable_instance_exists(id, "jump_speed")) jump_speed = -10;
 
 // Freeze while paused (patrol would otherwise continue behind the pause panel).
 if (instance_exists(obj_game) && obj_game.state == "pause") exit;
+
+// Spawn-state guards (self-heal if Create didn't run first).
+if (!variable_instance_exists(id, "spawning")) spawning = false;
+if (!variable_instance_exists(id, "despawning")) despawning = false;
+if (!variable_instance_exists(id, "spawn_fade_in")) spawn_fade_in = 30;
+if (!variable_instance_exists(id, "spawn_fade_out")) spawn_fade_out = 24;
+if (!variable_instance_exists(id, "aggro")) aggro = false;
+if (!variable_instance_exists(id, "aggro_grace")) aggro_grace = 180;
+if (!variable_instance_exists(id, "aggro_timer")) aggro_timer = 0;
+
+// Spawned by obj_spawner: fade in harmless, fade out to despawn.
+if (spawning) {
+    image_alpha = min(image_alpha + 1 / max(1, spawn_fade_in), 1);
+    if (image_alpha >= 1) spawning = false; // active from now on
+    exit; // frozen mid-materialize: no AI, gravity, or damage (fair)
+}
+if (despawning) {
+    image_alpha -= 1 / max(1, spawn_fade_out);
+    if (image_alpha <= 0) { instance_destroy(); exit; }
+    exit; // frozen and harmless while vanishing
+}
 
 if (touch_cd > 0) touch_cd -= 1;
 vsp += grav;
@@ -43,14 +70,32 @@ hsp_enemy = 0;
 var _chasing = false;
 
 if (instance_exists(obj_player) && instance_exists(obj_game) && obj_game.state == "play") {
-    var _dist = point_distance(x, y, obj_player.x, obj_player.y);
-    if (_dist < chase_range) _chasing = true;
+    // Rectangular vision: wide horizontal, half as tall (not a circle).
+    var _vdx = obj_player.x - x;
+    var _vdy = obj_player.y - y;
+    if (abs(_vdx) < chase_range && abs(_vdy) < chase_range / 2) _chasing = true;
 }
 
-if (_chasing) {
-    move_dir = sign(obj_player.x - x);
-    if (move_dir == 0) move_dir = 1;
-    hsp_enemy = move_dir * chase_speed;
+// Aggro expires after losing sight: back to patrol/vision instead of
+// hugging a wall forever. Refreshes every step the player stays visible.
+if (aggro) {
+    if (_chasing) aggro_timer = aggro_grace;
+    else {
+        aggro_timer -= 1;
+        if (aggro_timer <= 0) aggro = false;
+    }
+}
+
+var _idle_hold = false;
+if (_chasing || aggro) { // spawner-spawned enemies chase from activation
+    if (instance_exists(obj_player)) {
+        var _pdx = obj_player.x - x;
+        if (abs(_pdx) > face_deadzone) move_dir = sign(_pdx); // deadzone: facing never flickers
+        if (abs(_pdx) <= arrive_range) {
+            hsp_enemy = 0; // arrived: stand ground, idle below
+            _idle_hold = true;
+        } else hsp_enemy = move_dir * chase_speed;
+    } else hsp_enemy = 0;
 } else {
     hsp_enemy = move_dir * patrol_speed;
     if (x < patrol_left) move_dir = 1;
@@ -101,6 +146,14 @@ for (var _hs = 0; _hs < _hfull + (_hrem > 0 ? 1 : 0); _hs++) {
 if (_hblocked) {
     hsp_enemy = 0;
     if (!_chasing) move_dir *= -1; // turn around on wall/box/door while patrolling
+    else if (_ewas_ground) {
+        // Chasing and stuck: hop pushable boxes and low ledges, or jump for
+        // a player above. Tall walls/doors still hold us (no bunny-hopping
+        // pointlessly at them).
+        var _boxwall = place_meeting(x + move_dir, y, obj_pushable);
+        var _above = instance_exists(obj_player) && obj_player.y < y - 40;
+        if (_boxwall || _above) vsp = jump_speed;
+    }
 }
 
 // Vertical collide (stand on ground AND boxes AND closed door tops)
@@ -154,3 +207,45 @@ if (touch_cd <= 0 && instance_exists(obj_player) && place_meeting(x, y, obj_play
         }
     }
 }
+
+// Face walk direction (move_dir is always -1 or 1).
+image_xscale = move_dir;
+
+// Animation: phased jump (0-1 rise, air to air_end, last 2 land), run grounded.
+// Frames driven manually so each phase syncs to physics (player's system:
+// takeoff crouch, air frames while falling, landing beat after real air).
+var _eground_now = (place_meeting(x, y + 1, obj_solid)
+|| place_meeting(x, y + 1, obj_pushable)
+|| place_meeting(x, y + 1, obj_door_key)
+|| place_meeting(x, y + 1, obj_door_final));
+var _etook_off = (grounded_prev && !_eground_now);
+var _elanded = (!grounded_prev && _eground_now);
+if (!_eground_now) air_timer += 1;
+if (_elanded) {
+    if (air_timer > 6) land_timer = 10; // real jump/fall: play the landing beat
+    air_timer = 0; // tiny step-downs don't trigger it
+}
+if (land_timer > 0) land_timer -= 1;
+var _e_air_end = image_number - 3; // last air frame, held on long falls
+var _e_land_a = image_number - 2; // landing beat, first frame
+var _e_land_b = image_number - 1; // landing beat, held crouch
+var _ewant = spr_enemy_run;
+if (!_eground_now) _ewant = spr_enemy_jump;
+else if (land_timer > 0) _ewant = spr_enemy_jump;
+else if (_idle_hold) _ewant = spr_enemy_idle;
+if (sprite_index != _ewant) {
+    sprite_index = _ewant;
+    image_index = 0;
+}
+// Takeoff frame from physics: jumped = crouch, walked off = airborne.
+if (_etook_off) image_index = (vsp < 0) ? 0 : 2;
+if (_ewant == spr_enemy_jump) {
+    if (!_eground_now) {
+        if (vsp < 0) image_index = min(image_index + 0.12, 2); // rise: crouch to air
+        else if (image_index < _e_air_end) image_index = min(image_index + 0.3, _e_air_end); // fall: hold last air
+    } else if (land_timer > 0) {
+        if (image_index < _e_land_a) image_index = _e_land_a;
+        else image_index = min(image_index + 0.25, _e_land_b); // landing beat, hold crouch
+    }
+}
+grounded_prev = _eground_now;

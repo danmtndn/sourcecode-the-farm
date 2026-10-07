@@ -1,6 +1,11 @@
 // obj_player - Create
 // Custom instance vars only (no hspeed/vspeed/direction/speed built-ins).
-move_speed = 3;
+walk_speed = 3; // base pace: matches enemy chase (stalk stalemate)
+run_speed = 4.5; // sprint: outruns the enemy, auto-engaged while chased
+move_speed = 3; // active pace, picked each step below
+running = false;
+calm_timer = 0; // grace after danger passes before dropping to walk
+being_chased = false;
 jump_speed = -9;
 grav = 0.6;
 slope_max = 6; // max pixels to step up/down slopes per frame (45deg needs ~move_speed)

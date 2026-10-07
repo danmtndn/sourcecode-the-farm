@@ -51,6 +51,28 @@ if (_move != 0) {
 // (Sprite is picked at the end of the step so this flag is always fresh.)
 pushing = false;
 
+// Chase sense: sprint while any enemy actively hunts us (aggro latched,
+// or inside its rectangular vision). Read-only: never writes enemies.
+if (!variable_instance_exists(id, "running")) running = false;
+if (!variable_instance_exists(id, "calm_timer")) calm_timer = 0;
+if (!variable_instance_exists(id, "being_chased")) being_chased = false;
+if (!variable_instance_exists(id, "walk_speed")) walk_speed = 3;
+if (!variable_instance_exists(id, "run_speed")) run_speed = 4.5;
+being_chased = false;
+if (instance_exists(obj_enemy) && instance_exists(obj_game) && obj_game.state == "play") {
+    var _ec = instance_number(obj_enemy);
+    for (var _ei = 0; _ei < _ec; _ei++) {
+        var _en = instance_find(obj_enemy, _ei);
+        if (_en.aggro || (abs(x - _en.x) < _en.chase_range && abs(y - _en.y) < _en.chase_range / 2)) {
+            being_chased = true;
+            break;
+        }
+    }
+}
+if (being_chased) calm_timer = 45; // stay sprinting briefly after danger passes
+else if (calm_timer > 0) calm_timer -= 1;
+running = (being_chased || calm_timer > 0);
+move_speed = running ? run_speed : walk_speed;
 hsp = _move * move_speed;
 vsp += grav;
 
@@ -105,19 +127,26 @@ if (place_meeting(x + hsp, y, obj_solid)
 var _box = instance_place(x + hsp, y, obj_pushable);
 if (_box != noone && hsp != 0) {
     pushing = true; // engaged with a box (even if it ends up blocked)
+    hsp *= 0.5; // pushing pace: half movespeed (walk 1.5, run ~2.25)
     var _push_dir = sign(hsp);
-    var _steps = abs(hsp);
+    // Total push distance may be fractional: whole pixels plus one
+    // fractional remainder substep, so speed stays exact (no overshoot).
+    var _ptotal = abs(hsp);
+    var _pfull = floor(_ptotal);
+    var _prem = _ptotal - _pfull;
     var _moved = 0;
     var _keep_mask = mask_index;
-    for (var _i = 0; _i < _steps; _i++) {
+    for (var _i = 0; _i < _pfull + (_prem > 0 ? 1 : 0); _i++) {
+        var _plen = (_prem > 0 && _i == _pfull) ? _prem : 1.0;
+        var _step = _push_dir * _plen;
         // Destination tests with the BOX mask (48px sprite), not our
         // narrower 23px body, so edges register exactly.
         mask_index = spr_pushable;
-        var _solid_hit = place_meeting(_box.x + _push_dir, _box.y, obj_solid);
-        var _door_hit = place_meeting(_box.x + _push_dir, _box.y, obj_door_key)
-            || place_meeting(_box.x + _push_dir, _box.y, obj_door_final);
+        var _solid_hit = place_meeting(_box.x + _step, _box.y, obj_solid);
+        var _door_hit = place_meeting(_box.x + _step, _box.y, obj_door_key)
+            || place_meeting(_box.x + _step, _box.y, obj_door_final);
         var _foe_hit = instance_exists(obj_enemy)
-            && instance_place(_box.x + _push_dir, _box.y, obj_enemy) != noone;
+            && instance_place(_box.x + _step, _box.y, obj_enemy) != noone;
         mask_index = _keep_mask;
         // Other-box overlap via exact extents. (instance_place returns a
         // single match, so a neighbor hiding behind _box itself would slip
@@ -128,20 +157,20 @@ if (_box != noone && hsp != 0) {
         for (var _bix = 0; _bix < _bcount; _bix++) {
             var _btest = instance_find(obj_pushable, _bix);
             if (_btest == _box) continue;
-            var _tx = _box.x + _push_dir;
+            var _tx = _box.x + _step;
             if (_tx - 24 * _box.image_xscale < _btest.x + 24 * _btest.image_xscale
             && _tx + 24 * _box.image_xscale > _btest.x - 24 * _btest.image_xscale
             && _box.y - 48 * _box.image_yscale < _btest.y
             && _box.y > _btest.y - 48 * _btest.image_yscale) { _box_hit = true; break; }
         }
         // Player path with the PLAYER mask.
-        var _player_hit = place_meeting(x + _push_dir, y, obj_solid)
-            || place_meeting(x + _push_dir, y, obj_door_key)
-            || place_meeting(x + _push_dir, y, obj_door_final);
+        var _player_hit = place_meeting(x + _step, y, obj_solid)
+            || place_meeting(x + _step, y, obj_door_key)
+            || place_meeting(x + _step, y, obj_door_final);
         if (!_solid_hit && !_door_hit && !_foe_hit && !_box_hit && !_player_hit) {
-            _box.x += _push_dir;
-            x += _push_dir;
-            _moved += 1;
+            _box.x += _step;
+            x += _step;
+            _moved += _plen;
             continue;
         }
         // Blocked: slope assist — step the box up terrain ramps, but only on
@@ -150,13 +179,13 @@ if (_box != noone && hsp != 0) {
         if (!_solid_hit || _door_hit || _box_hit || _foe_hit || _player_hit) break;
         var _brise = 0;
         mask_index = spr_pushable;
-        while (_brise < slope_max && place_meeting(_box.x + _push_dir, _box.y - _brise, obj_solid)) _brise++;
+        while (_brise < slope_max && place_meeting(_box.x + _step, _box.y - _brise, obj_solid)) _brise++;
         mask_index = _keep_mask;
         if (_brise <= 0 || _brise >= slope_max) break;
         // Raised cell must be free of EVERYTHING: re-verify terrain there,
         // plus an extents check so a stack waiting above stops the climb
         // instead of letting the box rise into it.
-        var _ux = _box.x + _push_dir;
+        var _ux = _box.x + _step;
         var _uy = _box.y - _brise;
         mask_index = spr_pushable;
         var _up_clear = !place_meeting(_ux, _uy, obj_solid)
@@ -174,13 +203,13 @@ if (_box != noone && hsp != 0) {
             && _uy > _bup.y - 48 * _bup.image_yscale) { _up_box = true; break; }
         }
         if (!_up_clear || _up_box) break;
-        _box.x += _push_dir;
+        _box.x += _step;
         _box.y -= _brise;
-        x += _push_dir;
-        _moved += 1;
+        x += _step;
+        _moved += _plen;
     }
     mask_index = _keep_mask; // safety: never leave the step on the box mask
-    if (_moved < _steps) {
+    if (_moved < _ptotal) {
         // Blocked partway: snap player to contact edge and stop leftover motion
         while (!place_meeting(x + _push_dir, y, obj_pushable)
         && !place_meeting(x + _push_dir, y, obj_solid)
@@ -286,6 +315,7 @@ if (!_grounded_now) _want = spr_player_jump;
 else if (pushing && _move != 0) _want = spr_player_push;
 else if (anticipate_timer > 0 || _fired) _want = spr_player_jump;
 else if (land_timer > 0) _want = spr_player_jump;
+else if (running && _move != 0) _want = spr_player_run;
 else if (_move != 0) _want = spr_player_walk;
 if (sprite_index != _want) {
     sprite_index = _want;
