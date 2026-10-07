@@ -17,9 +17,24 @@ var _shown = string_copy(tagline, 1, tag_timer div tag_speed);
 if (string_length(_shown) < string_length(tagline) && (current_time div 500) mod 2 == 0) _shown += "_";
 draw_text_ext(_cx - 250, _gh/2 - 100, _shown, 22, 500);
 
-// Options (centered). In settings mode these become the Music/SFX toggles.
+// Options (centered). Settings mode shows toggles, achievements mode a list.
 draw_set_halign(fa_center);
-if (!menu_settings) {
+if (menu_achievements) {
+    // One row per achievement: gold label if earned, grey ??? + hint if not.
+    var _got = [ach_hidden1, ach_hidden2, ach_hidden3, ach_level];
+    for (var a = 0; a < 4; a++) {
+        var _ay = _gh/2 - 52 + a * 28;
+        if (_got[a]) {
+            draw_set_color(c_yellow);
+            draw_text(_cx, _ay, ach_list[a][0]);
+        } else {
+            draw_set_color(c_dkgray);
+            draw_text(_cx, _ay, "??? - " + ach_list[a][1]);
+        }
+    }
+    draw_set_color(c_dkgray);
+    draw_text(_cx, _gh/2 + 80, "[ENTER/ESC] Back");
+} else if (!menu_settings) {
     for (var i = 0; i < array_length(options); i++) {
         var _y = _gh/2 - 20 + i * 32;
         if (i == selected) {
@@ -45,12 +60,15 @@ if (!menu_settings) {
 }
 draw_set_color(c_white);
 
-// Controls + achievements footer (left-aligned box)
-draw_set_halign(fa_left);
-draw_text(_cx - 250, _gh/2 + 80, "W/S or Up/Down: select   ENTER: confirm");
-draw_text(_cx - 250, _gh/2 + 104, "In game: A/D move, SPACE jump, E interact, N note, P pause");
-var _got = (ach_hidden ? 1 : 0) + (ach_level ? 1 : 0);
-draw_set_color(c_dkgray);
-draw_text(_cx - 250, _gh/2 + 132, "Achievements: " + string(_got) + "/2");
-draw_set_halign(fa_left);
-draw_set_color(c_white);
+// Controls + achievements footer (left-aligned box; hidden while the
+// achievements list is up since it carries its own Back hint).
+if (!menu_achievements) {
+    draw_set_halign(fa_left);
+    draw_text(_cx - 250, _gh/2 + 80, "W/S or Up/Down: select   ENTER: confirm");
+    draw_text(_cx - 250, _gh/2 + 104, "In game: A/D move, SPACE jump, E interact, N note, P pause");
+    var _got = (ach_hidden1 ? 1 : 0) + (ach_hidden2 ? 1 : 0) + (ach_hidden3 ? 1 : 0) + (ach_level ? 1 : 0);
+    draw_set_color(c_dkgray);
+    draw_text(_cx - 250, _gh/2 + 132, "Achievements: " + string(_got) + "/4");
+    draw_set_halign(fa_left);
+    draw_set_color(c_white);
+}

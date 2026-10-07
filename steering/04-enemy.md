@@ -1,11 +1,40 @@
-# Enemy (Patrol + Chase)
+# Enemy (Patrol / Chase / Attack)
 
-`obj_enemy/Create_0.gml`: `patrol_speed=1.5; chase_speed=2.8; grav=0.6; hsp_enemy=0; vsp=0; move_dir=1; chase_range=320; patrol_left=x-160; patrol_right=x+160; touch_cd=0;`
-Tune per level: L1 240, L2 320, L3 400. Set `patrol_left/right` in room Creation Code for corridor length.
+`obj_enemy/Create_0.gml`: `patrol_speed=1.5; chase_speed=3; jump_speed=-10`
+(clears boxes, not tall walls); `arrive_range=10; face_deadzone=2`;
+`touch_cd=0`; `slope_max=6`; anim timers + `grounded_prev`. Mask pinned to
+`spr_enemy_run`. Per-level `chase_range` (L1 240, L2 320, L3 400), patrol
+bounds via spawner `patrol_halfwidth` (was room Creation Code).
 
-`obj_enemy/Step_0.gml`:
-- `vsp+=grav`. If `point_distance(player) < chase_range` and state==play -> chase.
-- Chase: `move_dir=sign(player.x-x); hsp_enemy=move_dir*chase_speed`.
-- Patrol: `hsp_enemy=move_dir*patrol_speed`, flip at `patrol_left/right` or wall hit.
-- Horizontal vs `obj_solid` step-to-contact. `x+=hsp_enemy`. Vertical vs `obj_solid`. `y+=vsp`.
-- Touch `place_meeting(enemy,player)` with `touch_cd<=0` -> `obj_game.take_damage(1)`, `touch_cd=60`, knock player `vsp=-8`, push 24px away so escape is possible (enemy 2.8 < player 4).
+## Senses
+- Rectangular vision, NOT a circle: `|dx| < chase_range` AND
+  `|dy| < chase_range/2`. Label and player-sprint sense use the same rule.
+- `aggro` (spawner-set): chase from activation regardless of vision; expires
+  after `aggro_grace` (180) consecutive unseen steps -> back to patrol/vision.
+- Facing: `move_dir` updates past `face_deadzone` only (never flickers at ~0);
+  `image_xscale = move_dir`. On arrival (`|dx| <= arrive_range`): hold still,
+  idle sprite, touch damage still live.
+
+## `obj_enemy/Step_0.gml`
+- Guards, pause freeze, spawn fade in/out (frozen + harmless, then active/destroyed).
+- Chase: beeline at `chase_speed`; patrol: `patrol_speed`, flip at
+  `patrol_left/right` or wall hit — unless boxed both sides (hold, no jitter).
+- Horizontal is pixel-stepped (whole + fractional remainder, no tunneling)
+  with slope-up assist (terrain-only) and step-up onto lone boxes while
+  chasing (stacked pairs still barricade). Boxes/doors stop patrols.
+- Stuck while chasing + grounded: jump if box ahead or player above 40px
+  (`jump_cd = 40` spacing, no pogo).
+- Vertical lands on ground/boxes/door tops; slope-down snap; depenetration
+  out of boxes/walls/doors (up, then sideways, else cancel velocity).
+- Damage on touch (`touch_cd<=0`): `take_damage(1)`, `touch_cd=60`, knock
+  player `vsp=-8` + up to 24px shove with collision-safe placement.
+
+## Attack (telegraphed, dodgeable)
+Trigger (touch + cooldown ready + `play`) starts `attack_windup` (18 steps),
+frozen in place; the hit lands only if contact still holds at the end
+(move away to dodge), then `attack_recover` (12) and AI resumes. Frames
+0-2 windup, 3-4 strike/recover on the 5-frame `spr_enemy_attack` strip.
+
+## Animation
+Phased jump (0-1 rise, air to `image_number-3`, last 2 land after 6+ airborne
+steps), then land beat, idle, run — same manual-frame system as the player.

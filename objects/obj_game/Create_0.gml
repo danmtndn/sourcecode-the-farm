@@ -57,7 +57,9 @@ global.final_code = "4821";  // EDIT: code for final door
 global.note_open = false;     // N toggles zoomed paper overlay
 global.note_sprite = spr_player_walk; // EDIT: swap to your spr_paper_zoom when ready
 global.damage_flash = 0;
-global.ach_hidden = false;
+global.ach_hidden1 = false; // L1 secret (see obj_hidden_item Step)
+global.ach_hidden2 = false; // L2 secret
+global.ach_hidden3 = false; // L3 secret (needs an obj_hidden_item in rm_level_3)
 global.ach_level = false;
 global.ach_timer = 0;
 global.ach_text = "";
@@ -71,7 +73,9 @@ if (instance_exists(obj_player)) {
 
 // Simple persistent save for achievements
 ini_open("thefarm_save.ini");
-if (ini_key_exists("ach", "hidden")) global.ach_hidden = ini_read_real("ach", "hidden", 0) > 0.5;
+if (ini_key_exists("ach", "hidden1")) global.ach_hidden1 = ini_read_real("ach", "hidden1", 0) > 0.5;
+if (ini_key_exists("ach", "hidden2")) global.ach_hidden2 = ini_read_real("ach", "hidden2", 0) > 0.5;
+if (ini_key_exists("ach", "hidden3")) global.ach_hidden3 = ini_read_real("ach", "hidden3", 0) > 0.5;
 if (ini_key_exists("ach", "level")) global.ach_level = ini_read_real("ach", "level", 0) > 0.5;
 ini_close();
 
@@ -132,12 +136,28 @@ take_damage = function(_dmg) {
 };
 
 unlock_achievement = function(_id, _label) {
-    if (_id == "hidden" && !global.ach_hidden) {
-        global.ach_hidden = true;
+    if (_id == "hidden1" && !global.ach_hidden1) {
+        global.ach_hidden1 = true;
         global.ach_text = "Achievement: " + _label;
         global.ach_timer = 180;
         ini_open("thefarm_save.ini");
-        ini_write_real("ach", "hidden", 1);
+        ini_write_real("ach", "hidden1", 1);
+        ini_close();
+    }
+    if (_id == "hidden2" && !global.ach_hidden2) {
+        global.ach_hidden2 = true;
+        global.ach_text = "Achievement: " + _label;
+        global.ach_timer = 180;
+        ini_open("thefarm_save.ini");
+        ini_write_real("ach", "hidden2", 1);
+        ini_close();
+    }
+    if (_id == "hidden3" && !global.ach_hidden3) {
+        global.ach_hidden3 = true;
+        global.ach_text = "Achievement: " + _label;
+        global.ach_timer = 180;
+        ini_open("thefarm_save.ini");
+        ini_write_real("ach", "hidden3", 1);
         ini_close();
     }
     if (_id == "level" && !global.ach_level) {

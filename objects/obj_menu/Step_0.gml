@@ -1,6 +1,15 @@
 // obj_menu - Step: W/S or Up/Down to move, ENTER/SPACE to confirm, ESC backs out.
 if (tag_timer < string_length(tagline) * tag_speed) tag_timer += 1;
 
+// Achievements view: static list, any confirm or ESC backs out.
+if (menu_achievements) {
+    if (keyboard_check_pressed(vk_enter) || keyboard_check_pressed(vk_space) || keyboard_check_pressed(vk_escape)) {
+        menu_achievements = false;
+        selected = 2; // land back on "Achievements"
+    }
+    exit;
+}
+
 var _rows = menu_settings ? 3 : array_length(options);
 var _up = keyboard_check_pressed(vk_up) || keyboard_check_pressed(ord("W"));
 var _down = keyboard_check_pressed(vk_down) || keyboard_check_pressed(ord("S"));
@@ -31,6 +40,8 @@ if (menu_settings && keyboard_check_pressed(vk_escape)) {
         else if (selected == 1) {
             menu_settings = true;
             selected = 0;
-        } else if (selected == 2) game_end();
+        } else if (selected == 2) {
+            menu_achievements = true;
+        } else if (selected == 3) game_end();
     }
 }
