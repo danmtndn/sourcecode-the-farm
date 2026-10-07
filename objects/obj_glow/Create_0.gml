@@ -20,11 +20,14 @@ ambient_color = make_colour_rgb(30, 30, 42);
 dark_surf = -1;
 
 emitters = [
-    [obj_player,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
     [obj_drawer,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
+	//[obj_pushable,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
+	[obj_door_key,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
+	[obj_door_final,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
     [obj_enemy,       100, c_red,                          0.55, 0.30, -24],
     [obj_key,          60, c_yellow,                       0.60, 0.00,  -8],
     [obj_paper,        60, make_colour_rgb(200, 220, 255), 0.60, 0.00,  -8],
     [obj_exit,         90, c_lime,                         0.55, 0.30, -24],
     [obj_hidden_item,  60, c_aqua,                         0.55, 0.00,  -8],
+	[obj_player,      130, make_colour_rgb(255, 190, 120), 0.45, 0.00, -24],
 ];

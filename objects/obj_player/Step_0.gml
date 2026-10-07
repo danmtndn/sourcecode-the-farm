@@ -2,6 +2,11 @@
 // Uses custom hsp/vsp only (no built-in hspeed/vspeed/direction).
 if (!variable_instance_exists(id, "hsp")) hsp = 0;
 if (!variable_instance_exists(id, "vsp")) vsp = 0;
+// Self-heal anim state if Create didn't run first (stale build): reading
+// an unset instance var crashes the step, same pattern as hsp/vsp above.
+if (!variable_instance_exists(id, "grounded_prev")) grounded_prev = true;
+if (!variable_instance_exists(id, "land_timer")) land_timer = 0;
+if (!variable_instance_exists(id, "air_timer")) air_timer = 0;
 
 // Hard freeze while paused: no gravity, motion, or cooldown timers.
 // (The intro/outro/death branch below intentionally still settles.)
@@ -48,6 +53,18 @@ pushing = false;
 
 hsp = _move * move_speed;
 vsp += grav;
+
+// Jump wind-up: a started timer crouches locked in place, then launches.
+// Committed even if you drift off an edge mid-windup (input-buffer feel).
+var _fired = false;
+if (anticipate_timer > 0) {
+    anticipate_timer -= 1;
+    hsp = 0; // planted feet while winding up (also skips the push block)
+    if (anticipate_timer <= 0) {
+        vsp = jump_speed;
+        _fired = true;
+    }
+}
 
 // Grounded state before moving (drives the slope-down snap later).
 var _was_grounded = (place_meeting(x, y + 1, obj_solid)
@@ -233,28 +250,69 @@ if (_was_grounded && vsp >= 0 && _move != 0
     }
 }
 
-// Grounded jump (from ground, box or closed door top)
-if (jump_key_pressed && (place_meeting(x, y + 1, obj_solid)
+// Grounded jump (from ground, box or closed door top): press starts the
+// wind-up instead of launching instantly (max() keeps a 0-step tune working).
+if (jump_key_pressed && anticipate_timer <= 0
+&& (place_meeting(x, y + 1, obj_solid)
 || place_meeting(x, y + 1, obj_pushable)
 || place_meeting(x, y + 1, obj_door_key)
 || place_meeting(x, y + 1, obj_door_final))) {
-    vsp = jump_speed;
+    anticipate_timer = max(1, anticipate_steps);
 }
 
-// Animation: jump while airborne, push while shoving a box, walk/idle grounded.
+// Animation: phased jump (0-1 rise, 2-9 air, 10-11 land), push, walk, idle.
 // Evaluated after movement so `pushing` reflects this frame's actual push.
+// Frames are driven manually so each phase syncs to physics, not wall clock.
 var _grounded_now = (place_meeting(x, y + 1, obj_solid)
 || place_meeting(x, y + 1, obj_pushable)
 || place_meeting(x, y + 1, obj_door_key)
 || place_meeting(x, y + 1, obj_door_final));
+var _took_off = (grounded_prev && !_grounded_now);
+var _landed = (!grounded_prev && _grounded_now);
+if (!_grounded_now) air_timer += 1;
+if (_landed) {
+    if (air_timer > 6) land_timer = 10; // real jump: play the landing beat
+    air_timer = 0; // tiny step-downs don't trigger it
+}
+if (land_timer > 0) land_timer -= 1;
+// Landing/air indices relative to strip length (strip: 2 ready + air + 2
+// land), so trimming or extending frames in the sprite editor can't break
+// the mapping the way hardcoded 9/10/11 would.
+var _air_end = image_number - 3; // last air frame, held on long falls
+var _land_a = image_number - 2; // landing beat, first frame
+var _land_b = image_number - 1; // landing beat, held crouch
 var _want = spr_player_idle;
 if (!_grounded_now) _want = spr_player_jump;
 else if (pushing && _move != 0) _want = spr_player_push;
+else if (anticipate_timer > 0 || _fired) _want = spr_player_jump;
+else if (land_timer > 0) _want = spr_player_jump;
 else if (_move != 0) _want = spr_player_walk;
 if (sprite_index != _want) {
     sprite_index = _want;
-    image_index = 0; // restart the new animation from its first frame
+    image_index = 0;
 }
+// Takeoff frame from physics, not input timing (the press already expired
+// by the time gravity shows us airborne): jumped = crouch, walked off = air.
+// Takeoff: a real launch keeps its wind-up crouch (only restart the strip
+// when coming from later frames); walking off an edge starts airborne.
+if (_took_off) {
+    if (vsp < 0) { if (image_index > 2) image_index = 0; }
+    else image_index = 2;
+}
+if (_want == spr_player_jump) {
+    if (!_grounded_now) {
+        if (vsp < 0) image_index = min(image_index + rise_rate, 2); // rise: crouch to air
+        else if (image_index < _air_end) image_index = min(image_index + 0.3, _air_end); // fall: hold last air
+    } else if (anticipate_timer > 0 || _fired) {
+        // Wind-up crouch: progress 0->1 across the timer, hold at launch.
+        image_index = min((anticipate_steps - anticipate_timer) / max(1, anticipate_steps), 1);
+        if (_fired) image_index = 1;
+    } else if (land_timer > 0) {
+        if (image_index < _land_a) image_index = _land_a;
+        else image_index = min(image_index + 0.25, _land_b); // landing beat, hold crouch
+    }
+}
+grounded_prev = _grounded_now;
 
 // Fell out of room
 if (y > room_height + 200) {
