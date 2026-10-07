@@ -16,6 +16,13 @@ chase_range = 320;   // EDIT per level: L1 240, L2 320, L3 400 for difficulty
 patrol_left = x - 160;  // EDIT or set per instance in room editor via Creation Code
 patrol_right = x + 160;
 touch_cd = 0;
+jump_cd = 0; // hops are spaced out so failed jumps hold instead of pogoing
+// Telegraphed attack (see Step): windup, then damage only if still touching.
+attacking = false;   // mid-swing: frozen, playing the strip below
+attack_t = 0;         // steps since the windup started
+attack_hit_done = false; // strike landed once per swing
+attack_windup = 18;   // telegraph steps before the hit (dodge window)
+attack_recover = 12;  // steps after the hit before AI resumes
 land_timer = 0; // landing-beat countdown after a real jump/fall
 air_timer = 0; // consecutive airborne steps (filters out step-downs)
 grounded_prev = true; // grounded state last step (takeoff/landing edges)
@@ -32,4 +39,4 @@ aggro_timer = 0;     // counts down while aggroed and unseen
 spawn_fade_in = 30;  // steps to fade in (keep above 0)
 spawn_fade_out = 24; // steps to fade out (keep above 0)
 
-image_blend = c_red;
+image_blend = make_color_rgb(247, 151, 121);

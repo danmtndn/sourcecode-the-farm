@@ -311,8 +311,13 @@ var _air_end = image_number - 3; // last air frame, held on long falls
 var _land_a = image_number - 2; // landing beat, first frame
 var _land_b = image_number - 1; // landing beat, held crouch
 var _want = spr_player_idle;
+// Pressing into a closed door counts as pushing too (doors stay put;
+// opened ones change object, so anything still here blocks).
+var _door_push = (_move != 0
+    && (instance_place(x + sign(_move), y, obj_door_key) != noone
+    || instance_place(x + sign(_move), y, obj_door_final) != noone));
 if (!_grounded_now) _want = spr_player_jump;
-else if (pushing && _move != 0) _want = spr_player_push;
+else if ((pushing || _door_push) && _move != 0) _want = spr_player_push;
 else if (anticipate_timer > 0 || _fired) _want = spr_player_jump;
 else if (land_timer > 0) _want = spr_player_jump;
 else if (running && _move != 0) _want = spr_player_run;

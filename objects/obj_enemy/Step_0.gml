@@ -3,6 +3,7 @@
 if (!variable_instance_exists(id, "vsp")) vsp = 0;
 if (!variable_instance_exists(id, "move_dir")) move_dir = 1;
 if (!variable_instance_exists(id, "hsp_enemy")) hsp_enemy = 0;
+if (!variable_instance_exists(id, "jump_cd")) jump_cd = 0;
 if (!variable_instance_exists(id, "arrive_range")) arrive_range = 10;
 if (!variable_instance_exists(id, "face_deadzone")) face_deadzone = 2;
 if (!variable_instance_exists(id, "land_timer")) land_timer = 0;
@@ -19,6 +20,11 @@ if (!variable_instance_exists(id, "despawning")) despawning = false;
 if (!variable_instance_exists(id, "spawn_fade_in")) spawn_fade_in = 30;
 if (!variable_instance_exists(id, "spawn_fade_out")) spawn_fade_out = 24;
 if (!variable_instance_exists(id, "aggro")) aggro = false;
+if (!variable_instance_exists(id, "attacking")) attacking = false;
+if (!variable_instance_exists(id, "attack_t")) attack_t = 0;
+if (!variable_instance_exists(id, "attack_hit_done")) attack_hit_done = false;
+if (!variable_instance_exists(id, "attack_windup")) attack_windup = 18;
+if (!variable_instance_exists(id, "attack_recover")) attack_recover = 12;
 if (!variable_instance_exists(id, "aggro_grace")) aggro_grace = 180;
 if (!variable_instance_exists(id, "aggro_timer")) aggro_timer = 0;
 
@@ -35,6 +41,7 @@ if (despawning) {
 }
 
 if (touch_cd > 0) touch_cd -= 1;
+if (jump_cd > 0) jump_cd -= 1;
 vsp += grav;
 
 // Depenetration: a box pushed/fallen into us can leave us overlapped.
@@ -102,6 +109,40 @@ if (_chasing || aggro) { // spawner-spawned enemies chase from activation
     if (x > patrol_right) move_dir = -1;
 }
 
+// Attack: telegraphed strike. Touch with cooldown ready STARTS the windup
+// (no instant damage); the hit lands only if still touching at the end of
+// it, so the player dodges by breaking contact. Frozen in place throughout.
+if (!attacking && touch_cd <= 0 && instance_exists(obj_player) && instance_exists(obj_game) && obj_game.state == "play" && place_meeting(x, y, obj_player)) {
+    attacking = true;
+    attack_t = 0;
+    attack_hit_done = false;
+}
+if (attacking) {
+    hsp_enemy = 0; // planted feet: windup, strike, recover all stationary
+    attack_t += 1;
+    if (attack_t >= attack_windup && !attack_hit_done) {
+        attack_hit_done = true;
+        if (instance_exists(obj_player) && place_meeting(x, y, obj_player) && instance_exists(obj_game)) {
+            obj_game.take_damage(1);
+            touch_cd = 60;
+            // Knock player away so they can flee (collision-safe placement).
+            if (!variable_instance_exists(obj_player.id, "vsp")) obj_player.vsp = 0;
+            obj_player.vsp = -8;
+            var _kdx = sign(obj_player.x - x);
+            if (_kdx == 0) _kdx = 1;
+            for (var _k = 0; _k < 24; _k++) {
+                if (!place_meeting(obj_player.x + _kdx, obj_player.y, obj_solid)
+                && !place_meeting(obj_player.x + _kdx, obj_player.y, obj_pushable)
+                && !place_meeting(obj_player.x + _kdx, obj_player.y, obj_door_key)
+                && !place_meeting(obj_player.x + _kdx, obj_player.y, obj_door_final)) {
+                    obj_player.x += _kdx;
+                } else break;
+            }
+        }
+    }
+    if (attack_t >= attack_windup + attack_recover) attacking = false;
+}
+
 // Grounded state before moving (drives the slope-down snap later).
 var _ewas_ground = (place_meeting(x, y + 1, obj_solid)
 || place_meeting(x, y + 1, obj_pushable)
@@ -131,6 +172,10 @@ for (var _hs = 0; _hs < _hfull + (_hrem > 0 ? 1 : 0); _hs++) {
         && !place_meeting(_nx, y, obj_pushable)
         && !place_meeting(_nx, y, obj_door_key)
         && !place_meeting(_nx, y, obj_door_final);
+    var _box_only = !_terrain_only && place_meeting(_nx, y, obj_pushable)
+        && !place_meeting(_nx, y, obj_solid)
+        && !place_meeting(_nx, y, obj_door_key)
+        && !place_meeting(_nx, y, obj_door_final);
     var _stepped = false;
     if (_terrain_only) {
         var _er = 0;
@@ -140,19 +185,45 @@ for (var _hs = 0; _hs < _hfull + (_hrem > 0 ? 1 : 0); _hs++) {
             x = _nx;
             _stepped = true;
         }
+    } else if (_chasing && _box_only) {
+        // Chasing onto a lone box: step up to its top (single boxes never
+        // stop us now; stacked pairs still barricade). Needs clear headroom.
+        var _br = 0;
+        while (_br < 56 && place_meeting(_nx, y - _br, obj_pushable)) _br++;
+        if (_br < 56 && _br > 0
+        && !place_meeting(_nx, y - _br, obj_solid)
+        && !place_meeting(_nx, y - _br, obj_pushable)
+        && !place_meeting(_nx, y - _br, obj_door_key)
+        && !place_meeting(_nx, y - _br, obj_door_final)) {
+            y -= _br;
+            x = _nx;
+            _stepped = true;
+        }
     }
     if (!_stepped) { _hblocked = true; break; }
 }
 if (_hblocked) {
     hsp_enemy = 0;
-    if (!_chasing) move_dir *= -1; // turn around on wall/box/door while patrolling
-    else if (_ewas_ground) {
+    if (!_chasing) {
+        // Turn around, unless boxed in on both sides (hold, don't jitter).
+        var _back = -_hdir;
+        if (_back == 0) _back = 1;
+        if (place_meeting(x + _back, y, obj_solid)
+        || place_meeting(x + _back, y, obj_pushable)
+        || place_meeting(x + _back, y, obj_door_key)
+        || place_meeting(x + _back, y, obj_door_final)) {
+            // nowhere to turn to: hold still, facing stays put
+        } else move_dir *= -1; // turn around on wall/box/door while patrolling
+    } else if (_ewas_ground && jump_cd <= 0) {
         // Chasing and stuck: hop pushable boxes and low ledges, or jump for
         // a player above. Tall walls/doors still hold us (no bunny-hopping
         // pointlessly at them).
         var _boxwall = place_meeting(x + move_dir, y, obj_pushable);
         var _above = instance_exists(obj_player) && obj_player.y < y - 40;
-        if (_boxwall || _above) vsp = jump_speed;
+        if (_boxwall || _above) {
+            vsp = jump_speed;
+            jump_cd = 40; // one hop attempt, then hold until cooldown clears
+        }
     }
 }
 
@@ -187,27 +258,6 @@ if (_ewas_ground && vsp >= 0
     }
 }
 
-// Damage player on touch (with per-enemy cooldown + player invuln)
-if (touch_cd <= 0 && instance_exists(obj_player) && place_meeting(x, y, obj_player)) {
-    if (instance_exists(obj_game)) {
-        obj_game.take_damage(1);
-        touch_cd = 60;
-        // Knock player away so they can flee (collision-safe so player never ends up inside a box/wall/closed door)
-        if (!variable_instance_exists(obj_player.id, "vsp")) obj_player.vsp = 0;
-        obj_player.vsp = -8;
-        var _kdx = sign(obj_player.x - x);
-        if (_kdx == 0) _kdx = 1;
-        for (var _k = 0; _k < 24; _k++) {
-            if (!place_meeting(obj_player.x + _kdx, obj_player.y, obj_solid)
-            && !place_meeting(obj_player.x + _kdx, obj_player.y, obj_pushable)
-            && !place_meeting(obj_player.x + _kdx, obj_player.y, obj_door_key)
-            && !place_meeting(obj_player.x + _kdx, obj_player.y, obj_door_final)) {
-                obj_player.x += _kdx;
-            } else break;
-        }
-    }
-}
-
 // Face walk direction (move_dir is always -1 or 1).
 image_xscale = move_dir;
 
@@ -230,7 +280,8 @@ var _e_air_end = image_number - 3; // last air frame, held on long falls
 var _e_land_a = image_number - 2; // landing beat, first frame
 var _e_land_b = image_number - 1; // landing beat, held crouch
 var _ewant = spr_enemy_run;
-if (!_eground_now) _ewant = spr_enemy_jump;
+if (attacking) _ewant = spr_enemy_attack;
+else if (!_eground_now) _ewant = spr_enemy_jump;
 else if (land_timer > 0) _ewant = spr_enemy_jump;
 else if (_idle_hold) _ewant = spr_enemy_idle;
 if (sprite_index != _ewant) {
@@ -238,8 +289,13 @@ if (sprite_index != _ewant) {
     image_index = 0;
 }
 // Takeoff frame from physics: jumped = crouch, walked off = airborne.
-if (_etook_off) image_index = (vsp < 0) ? 0 : 2;
-if (_ewant == spr_enemy_jump) {
+// (Skipped while attacking: the swing owns its frames, see below.)
+if (_etook_off && !attacking) image_index = (vsp < 0) ? 0 : 2;
+if (_ewant == spr_enemy_attack) {
+    // Windup frames 0-2, strike/recover 3-4 (5-frame strip).
+    if (attack_t < attack_windup) image_index = min(floor(attack_t / max(1, attack_windup) * 3), 2);
+    else image_index = min(3 + floor((attack_t - attack_windup) / max(1, attack_recover) * 2), 4);
+} else if (_ewant == spr_enemy_jump) {
     if (!_eground_now) {
         if (vsp < 0) image_index = min(image_index + 0.12, 2); // rise: crouch to air
         else if (image_index < _e_air_end) image_index = min(image_index + 0.3, _e_air_end); // fall: hold last air
