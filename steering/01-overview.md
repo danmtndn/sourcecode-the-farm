@@ -21,7 +21,7 @@ Desktop-focused. Pixel art (user-owned). This AI edits `.yy` + `.gml` only.
 ## Global state (`obj_game/Create_0.gml`)
 - `global.hp / max_hp = 3`, `global.has_key`, `global.code_found`, `global.level_code` (random per entry: L1 4 digits, L2 6, L3 8)
 - `global.note_open / note_sprite`, `global.damage_flash`, `global.ach_*`
-- `global.music_on / sfx_on` (+ `play_music()/play_sfx()` gates, no audio assets yet)
+- `global.music_on / sfx_on` (+ volumes, `play_music()/play_sfx()` gates, 9 sound assets wired)
 - `global.lighting_enabled / bloom_enabled`, `global.glow_enabled`, `global.darkness_enabled`
 - `global.vignette_enabled / vignette_alpha`
 - `take_damage(dmg)`, `unlock_achievement(id,label)`, ini `thefarm_save.ini` (ach + settings)

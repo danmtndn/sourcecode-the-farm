@@ -26,6 +26,7 @@ if (!opened) {
             if (keyboard_string == global.level_code) {
                 opened = true;
                 typing = false; // animation below takes over; still solid until it ends
+                if (instance_exists(obj_game)) obj_game.sfx_vary(snd_door, 1, 0.08);
             } else {
                 keyboard_string = ""; // wrong, retry
             }

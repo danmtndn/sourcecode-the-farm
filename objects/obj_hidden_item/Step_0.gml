@@ -9,6 +9,7 @@ if (instance_exists(obj_player) && obj_game.state == "play") {
         if (_rm == "rm_level_2") { _aid = "hidden2"; _alabel = "Barn Loft Secret"; }
         else if (_rm == "rm_level_3") { _aid = "hidden3"; _alabel = "Cellar Secret"; }
         obj_game.unlock_achievement(_aid, _alabel);
+        obj_game.sfx_vary(snd_pickup, 1, 0.08);
         instance_destroy();
     }
 }

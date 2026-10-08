@@ -146,6 +146,12 @@ if (ini_key_exists("settings", "sfx_vol")) global.sfx_vol = clamp(ini_read_real(
 if (ini_key_exists("settings", "master_vol")) global.master_vol = clamp(ini_read_real("settings", "master_vol", 1), 0, 1);
 ini_close();
 music_track = -1; // currently looping track started via play_music(), if any
+if (!variable_global_exists("bgm_track")) global.bgm_track = -1; // msc_background loop handle
+heart_track = -1; // msc_heartbeat loop handle (second loop beside BGM)
+heart_target = 0; // heartbeat chase fraction 0/1; gain = target * music_vol * master
+walk_track = -1; // msc_walk loop handle (player walking ambience)
+run_track = -1; // msc_run loop handle (player running music)
+move_target = 0; // movement music: 0 idle, 1 walk, 2 run
 
 save_settings = function() {
     ini_open("thefarm_save.ini");
@@ -158,13 +164,37 @@ save_settings = function() {
 };
 
 apply_audio_volumes = function() {
-    // Master gain plus per-track gain. Safe to call with no assets loaded.
+    // Master gain plus per-loop gains. One-shots need nothing (gain is set
+    // at play time). Safe to call with no assets loaded.
     var _m = global.master_vol;
     if (audio_group_is_loaded(audiogroup_default)) {
         audio_group_set_gain(audiogroup_default, _m, 0);
     }
     if (music_track != -1) {
         audio_sound_gain(music_track, global.music_on ? global.music_vol * _m : 0, 0);
+    }
+    if (variable_global_exists("bgm_track") && global.bgm_track != -1) {
+        if (audio_is_playing(global.bgm_track)) {
+            audio_sound_gain(global.bgm_track, global.music_on ? global.music_vol * _m : 0, 0);
+        } else global.bgm_track = -1;
+    }
+    if (heart_track != -1) {
+        if (audio_is_playing(heart_track)) {
+            var _hm = global.music_on ? global.music_vol : 0;
+            audio_sound_gain(heart_track, heart_target * _hm * _m, 0);
+        } else heart_track = -1;
+    }
+    if (walk_track != -1) {
+        if (audio_is_playing(walk_track)) {
+            var _wm = global.music_on ? global.music_vol : 0;
+            audio_sound_gain(walk_track, (move_target == 1 ? _wm : 0) * _m, 0);
+        } else walk_track = -1;
+    }
+    if (run_track != -1) {
+        if (audio_is_playing(run_track)) {
+            var _rm = global.music_on ? global.music_vol : 0;
+            audio_sound_gain(run_track, (move_target == 2 ? _rm : 0) * _m, 0);
+        } else run_track = -1;
     }
 };
 
@@ -191,6 +221,7 @@ toggle_music = function() {
         if (audio_is_playing(music_track)) audio_stop_sound(music_track);
         music_track = -1;
     }
+    if (global.music_on) start_bgm();
     apply_audio_volumes();
     save_settings();
 };
@@ -207,6 +238,28 @@ play_sfx = function(_snd, _pitch) {
     audio_sound_pitch(_id, _pitch);
     audio_sound_gain(_id, global.sfx_vol * global.master_vol, 0);
     return _id;
+};
+
+// Pitch-varied one-shot for repetitive sounds (pickups, drops, menu, hurt).
+sfx_vary = function(_snd, _base, _spread) {
+    if (_base == undefined) _base = 1;
+    if (_spread == undefined) _spread = 0.08;
+    return play_sfx(_snd, random_range(_base - _spread, _base + _spread));
+};
+
+// Endless background music. Starts once (menu boot or direct level launch),
+// keeps looping across rooms; muting is done via gain, never stopping it.
+start_bgm = function() {
+    if (!variable_global_exists("bgm_track")) global.bgm_track = -1;
+    if (global.bgm_track == -1 || !audio_is_playing(global.bgm_track)) {
+        global.bgm_track = -1;
+        if (global.music_on) {
+            global.bgm_track = audio_play_sound(msc_background, 1, true);
+            audio_sound_gain(global.bgm_track, global.music_vol * global.master_vol, 0);
+        }
+    } else {
+        audio_sound_gain(global.bgm_track, global.music_on ? global.music_vol * global.master_vol : 0, 0);
+    }
 };
 
 play_music = function(_snd) {
@@ -227,6 +280,10 @@ stop_music = function() {
 stop_all_sfx = function() {
     audio_stop_all();
     music_track = -1;
+    heart_track = -1;
+    walk_track = -1;
+    run_track = -1;
+    if (variable_global_exists("bgm_track")) global.bgm_track = -1;
 };
 
 take_damage = function(_dmg) {
@@ -235,6 +292,7 @@ take_damage = function(_dmg) {
     if (instance_exists(obj_player) && obj_player.invuln > 0) return;
     global.hp -= _dmg;
     global.damage_flash = 30; // frames of red overlay
+    sfx_vary(snd_hurt, 1, 0.05);
     // I-frames match the enemy attack cycle: windup 18 + recover 12 + 10 buffer.
     // Enemy touch_cd is 60, so any re-windup strikes after these expire: every
     // connected completed swing damages, broken-contact swings still whiff.
@@ -247,11 +305,12 @@ take_damage = function(_dmg) {
 };
 
 unlock_achievement = function(_id, _label) {
-    if (_id == "hidden1" && !global.ach_hidden1) {
+    var _newly = false;    if (_id == "hidden1" && !global.ach_hidden1) {
         global.ach_hidden1 = true;
         global.ach_title = "SECRET FOUND";
         global.ach_text = _label;
         global.ach_timer = 180;
+        _newly = true;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "hidden1", 1);
         ini_close();
@@ -261,6 +320,7 @@ unlock_achievement = function(_id, _label) {
         global.ach_title = "SECRET FOUND";
         global.ach_text = _label;
         global.ach_timer = 180;
+        _newly = true;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "hidden2", 1);
         ini_close();
@@ -270,6 +330,7 @@ unlock_achievement = function(_id, _label) {
         global.ach_title = "SECRET FOUND";
         global.ach_text = _label;
         global.ach_timer = 180;
+        _newly = true;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "hidden3", 1);
         ini_close();
@@ -279,8 +340,13 @@ unlock_achievement = function(_id, _label) {
         global.ach_title = "LEVEL CLEAR";
         global.ach_text = _label;
         global.ach_timer = 180;
+        _newly = true;
         ini_open("thefarm_save.ini");
         ini_write_real("ach", "level", 1);
         ini_close();
     }
+    if (_newly) play_sfx(snd_notification, 1);
 };
+
+// Boot the endless background loop (no-op if the menu already started it).
+start_bgm();

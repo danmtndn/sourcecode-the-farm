@@ -37,6 +37,7 @@ if (instance_exists(obj_player) && obj_game.state == "play") {
     && keyboard_check_pressed(ord("E"))) {
         global.code_found = paper_code;
         global.note_open = true; // show zoomed paper immediately
+        obj_game.sfx_vary(snd_pickup, 1, 0.08);
         instance_destroy();
     }
 }

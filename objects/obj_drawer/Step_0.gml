@@ -3,6 +3,7 @@ if (!opened && instance_exists(obj_player) && obj_game.state == "play") {
     if (point_distance(x, y, obj_player.x, obj_player.y) < 64
     && keyboard_check_pressed(ord("E"))) {
         opened = true;
+        if (instance_exists(obj_game)) obj_game.sfx_vary(snd_item_drop, 1, 0.08);
         var _dir = sign(obj_player.x - x);
         if (_dir == 0) _dir = 1;
         var _spawn = noone;

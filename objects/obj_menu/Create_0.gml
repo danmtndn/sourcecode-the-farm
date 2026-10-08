@@ -26,6 +26,7 @@ music_on = true;
 sfx_on = true;
 music_vol = 0.8;
 sfx_vol = 0.8;
+master_vol = 1.0;
 ini_open("thefarm_save.ini");
 if (ini_key_exists("ach", "hidden1")) ach_hidden1 = ini_read_real("ach", "hidden1", 0) > 0.5;
 if (ini_key_exists("ach", "hidden2")) ach_hidden2 = ini_read_real("ach", "hidden2", 0) > 0.5;
@@ -35,6 +36,7 @@ if (ini_key_exists("settings", "music")) music_on = ini_read_real("settings", "m
 if (ini_key_exists("settings", "sfx")) sfx_on = ini_read_real("settings", "sfx", 1) > 0.5;
 if (ini_key_exists("settings", "music_vol")) music_vol = clamp(ini_read_real("settings", "music_vol", 0.8), 0, 1);
 if (ini_key_exists("settings", "sfx_vol")) sfx_vol = clamp(ini_read_real("settings", "sfx_vol", 0.8), 0, 1);
+if (ini_key_exists("settings", "master_vol")) master_vol = clamp(ini_read_real("settings", "master_vol", 1), 0, 1);
 ini_close();
 
 save_audio = function() {
@@ -45,3 +47,26 @@ save_audio = function() {
     ini_write_real("settings", "sfx_vol", sfx_vol);
     ini_close();
 };
+
+// Live BGM gain for this room's sliders and toggles (obj_game owns the rest).
+apply_menu_volumes = function() {
+    if (!variable_global_exists("bgm_track")) global.bgm_track = -1;
+    if (global.bgm_track != -1 && audio_is_playing(global.bgm_track)) {
+        audio_sound_gain(global.bgm_track, music_on ? music_vol * master_vol : 0, 0);
+    } else if (music_on) {
+        global.bgm_track = audio_play_sound(msc_background, 1, true);
+        audio_sound_gain(global.bgm_track, music_vol * master_vol, 0);
+    } else global.bgm_track = -1;
+};
+// Local menu blip with pitch wobble (obj_game does not exist in this room).
+menu_blip = function(_base) {
+    if (_base == undefined) _base = 1;
+    if (!sfx_on) return -1;
+    var _id = audio_play_sound(snd_menu, 10, false);
+    audio_sound_pitch(_id, random_range(_base - 0.06, _base + 0.06));
+    audio_sound_gain(_id, sfx_vol * master_vol, 0);
+    return _id;
+};
+
+// Boot the endless background loop (obj_game adopts the handle in levels).
+apply_menu_volumes();

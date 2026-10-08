@@ -36,6 +36,7 @@ if (instance_exists(obj_player) && instance_exists(obj_game) && obj_game.state =
     if (point_distance(x, y, obj_player.x, obj_player.y) < 48
     && keyboard_check_pressed(ord("E"))) {
         global.has_key += 1;
+        obj_game.sfx_vary(snd_pickup, 1, 0.08);
         instance_destroy();
     }
 }

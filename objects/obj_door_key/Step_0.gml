@@ -8,6 +8,7 @@ if (!opened) {
         if (global.has_key >= keys_needed) {
             global.has_key -= keys_needed;
             opened = true; // animation below takes over; still solid until it ends
+            if (instance_exists(obj_game)) obj_game.sfx_vary(snd_door, 1, 0.08);
         }
     }
 } else {

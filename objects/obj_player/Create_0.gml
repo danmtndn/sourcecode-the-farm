@@ -23,6 +23,7 @@ pushing = false; // true while a box is engaged this step (drives push sprite)
 land_timer = 0; // counts down the landing-beat frames after a real jump
 air_timer = 0; // counts consecutive airborne steps (filters out step-downs)
 grounded_prev = true; // grounded state last step (takeoff/landing edges)
+grounded = true; // live grounded flag for outside readers (walk ambience)
 rise_rate = 1; // jump anticipation speed: image_index advance per step
 // while rising (frames 0-1). Higher = shorter crouch (0.25 clears it in
 // ~8 steps); lower = longer (0.06 barely leaves frame 0 during the rise).

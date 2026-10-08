@@ -34,6 +34,8 @@ if (!variable_instance_exists(id, "attack_windup")) attack_windup = 18;
 if (!variable_instance_exists(id, "attack_recover")) attack_recover = 12;
 if (!variable_instance_exists(id, "aggro_grace")) aggro_grace = 180;
 if (!variable_instance_exists(id, "aggro_timer")) aggro_timer = 0;
+if (!variable_instance_exists(id, "chasing_now")) chasing_now = false;
+if (!variable_instance_exists(id, "shout_done")) shout_done = false;
 
 // Spawned by obj_spawner: fade in harmless, fade out to despawn.
 if (spawning) {
@@ -98,6 +100,15 @@ if (aggro) {
         aggro_timer -= 1;
         if (aggro_timer <= 0) aggro = false;
     }
+}
+
+// Pursuit flag (drives the heartbeat) plus the once-per-spawn chase sting:
+// fires when pursuit actually starts, never during spawn materialization.
+chasing_now = (_chasing || aggro) && !spawning && !despawning;
+if (chasing_now && !shout_done && instance_exists(obj_game) && obj_game.state == "play") {
+    shout_done = true;
+    obj_game.play_sfx(snd_jumpscare, 1);
+    obj_game.play_sfx(snd_shout, 1);
 }
 
 var _idle_hold = false;

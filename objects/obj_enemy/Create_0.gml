@@ -68,6 +68,8 @@ despawning = false;  // fading out: frozen and harmless, then destroyed
 aggro = false;       // set by spawner: chase from activation, never patrol
 aggro_grace = 180;   // out-of-sight steps before aggro expires (~3s)
 aggro_timer = 0;     // counts down while aggroed and unseen
+chasing_now = false; // true while actively pursuing (drives heartbeat)
+shout_done = false;  // jumpscare+shout fire once per spawn, at chase start
 spawn_fade_in = 30;  // steps to fade in (keep above 0)
 spawn_fade_out = 24; // steps to fade out (keep above 0)
 

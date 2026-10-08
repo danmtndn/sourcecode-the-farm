@@ -298,6 +298,7 @@ var _grounded_now = (place_meeting(x, y + 1, obj_solid)
 || place_meeting(x, y + 1, obj_door_final));
 var _took_off = (grounded_prev && !_grounded_now);
 var _landed = (!grounded_prev && _grounded_now);
+grounded = _grounded_now; // publish for outside readers (walk ambience)
 if (!_grounded_now) air_timer += 1;
 if (_landed) {
     if (air_timer > 6) land_timer = 10; // real jump: play the landing beat
