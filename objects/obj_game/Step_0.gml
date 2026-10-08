@@ -24,17 +24,23 @@ if (state == "play" && instance_exists(obj_player) && spawn_x == 128 && spawn_y 
     // keep initial spawn; rooms you build set player start manually
 }
 
-// New room (persistent object): swap in that level's intro card.
-// rm_menu is handled by obj_menu, so just idle there instead of showing an intro.
+// New room (persistent object): menu idles, ending plays the outro,
+// levels get a fresh intro card, code and empty hands.
 if (room != loaded_room) {
     loaded_room = room;
     if (room_get_name(room) == "rm_menu") {
         state = "menu";
+    } else if (room_get_name(room) == "rm_ending") {
+        outro_timer = 0;
+        state = "outro";
     } else {
         intro_lines = story_for_room(room);
         intro_index = 0;
         type_timer = 0;
         outro_timer = 0;
+        // New level, new code: fresh random digits plus empty hands.
+        reset_level_items();
+        gen_level_code();
         state = "intro";
     }
 }
@@ -150,9 +156,8 @@ if (state == "dead") {
     if (dead_cooldown > 0) dead_cooldown -= 1;
     else if (!_locked && keyboard_check_pressed(ord("R"))) {
     global.hp = global.max_hp;
-    global.has_key = 0;
-    // keep code_found so player doesn't re-read paper after death? reset for simplicity
-    // global.code_found = "";
+    // Death wipes the full inventory: keys and clue. Re-read the paper.
+    reset_level_items();
     state = "play";
     if (instance_exists(obj_fade)) {
         with (obj_fade) fade_start("restart", 0);

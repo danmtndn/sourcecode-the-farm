@@ -19,7 +19,7 @@ Desktop-focused. Pixel art (user-owned). This AI edits `.yy` + `.gml` only.
 - `obj_exit`: level unlock + next room/outro. `obj_hidden_item`: per-level secret (hidden1/2/3 by room)
 
 ## Global state (`obj_game/Create_0.gml`)
-- `global.hp / max_hp = 3`, `global.has_key`, `global.code_found`, `global.final_code="4821"`
+- `global.hp / max_hp = 3`, `global.has_key`, `global.code_found`, `global.level_code` (random per entry: L1 4 digits, L2 6, L3 8)
 - `global.note_open / note_sprite`, `global.damage_flash`, `global.ach_*`
 - `global.music_on / sfx_on` (+ `play_music()/play_sfx()` gates, no audio assets yet)
 - `global.lighting_enabled / bloom_enabled`, `global.glow_enabled`, `global.darkness_enabled`
@@ -27,6 +27,6 @@ Desktop-focused. Pixel art (user-owned). This AI edits `.yy` + `.gml` only.
 - `take_damage(dmg)`, `unlock_achievement(id,label)`, ini `thefarm_save.ini` (ach + settings)
 
 ## Rooms (menu first, then linear, increasing difficulty)
-- `rm_menu` -> `rm_level_1` -> `rm_level_2` -> `rm_level_3` (outro returns to menu)
+- `rm_menu` -> `rm_level_1` -> `rm_level_2` -> `rm_level_3` -> `rm_ending` (outro plays there, `R` returns to menu)
 - Parallax: `BG_Far` trails camera (L1/L2 0.25, L3 0.45), `BG_Mid` world-locked; per-level foreground art (`bg_foreground1/2/3`), shared `bg_background`
 - L1: drawer-paper, key-door, chase_range 240. L2: pushables + hidden item, 320. L3: key + code doors, spawner encounters, 400.

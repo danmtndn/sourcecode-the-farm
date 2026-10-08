@@ -19,11 +19,11 @@ if (!opened) {
             var _o = ord(string_char_at(_raw, _i));
             if (_o >= 48 && _o <= 57) _clean += chr(_o);
         }
-        var _maxlen = max(1, string_length(global.final_code));
+        var _maxlen = max(1, string_length(global.level_code));
         if (string_length(_clean) > _maxlen) _clean = string_copy(_clean, 1, _maxlen);
         keyboard_string = _clean;
         if (keyboard_check_pressed(vk_enter)) {
-            if (keyboard_string == global.final_code) {
+            if (keyboard_string == global.level_code) {
                 opened = true;
                 typing = false; // animation below takes over; still solid until it ends
             } else {

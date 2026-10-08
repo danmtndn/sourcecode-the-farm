@@ -72,11 +72,38 @@ story_for_room = function(_rm) {
 intro_lines = story_for_room(room);
 loaded_room = room;
 
+// Fresh RNG so level codes differ every launch (singleton: Create runs once).
+randomize();
+
+// Level code: fresh random digits every entry. Length escalates per level:
+// rm_level_1 = 4, rm_level_2 = 6, rm_level_3 = 8. Digits only so fnt_digits
+// always covers them. First digit never zero for a clean keypad readout.
+gen_level_code = function() {
+    var _len = 4;
+    var _nm = room_get_name(room);
+    if (_nm == "rm_level_2") _len = 6;
+    else if (_nm == "rm_level_3") _len = 8;
+    var _c = string(irandom_range(1, 9));
+    for (var i = 1; i < _len; i++) _c += string(irandom(9));
+    global.level_code = _c;
+};
+
+// Full inventory wipe: keys and clue. Runs on every new level and on death.
+reset_level_items = function() {
+    global.has_key = 0;
+    global.code_found = "";
+    global.note_open = false;
+    global.damage_flash = 0;
+};
+reset_level_items();
+gen_level_code();
+
 if (!variable_global_exists("hp")) global.hp = 3;
 global.max_hp = 3;
-global.has_key = 0;          // keys for obj_door_key
-global.code_found = "";      // set by obj_paper, e.g. "4821"
-global.final_code = "4821";  // EDIT: code for final door
+global.has_key = 0;          // keys for obj_door_key, reset every level
+global.code_found = "";      // set by obj_paper from the level code
+// NOTE: no level_code init here: gen_level_code() above already set it,
+// and a blank init would wipe the fresh code (papers would carry "").
 global.note_open = false;     // N toggles zoomed paper overlay
 global.note_sprite = spr_paper_preview; // EDIT: swap to your spr_paper_zoom when ready
 global.damage_flash = 0;

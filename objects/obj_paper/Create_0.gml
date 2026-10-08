@@ -1,2 +1,3 @@
-// obj_paper - Create: holds part of final code. EDIT per level.
-paper_code = "4821"; // must match obj_game.final_code unless you split codes
+// obj_paper - Create: carries this level's randomized code. Spawned from a
+// drawer after room entry, so the fresh level code already exists.
+paper_code = global.level_code;

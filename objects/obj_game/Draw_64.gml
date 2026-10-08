@@ -118,29 +118,37 @@ if (global.damage_flash > 0) {
 }
 
 // Achievement popup: slides down, holds, slides up. Title in heading font,
-// short description in body font.
+// short description in body font. Panel measured around both lines so the
+// description always sits inside the rectangle.
 if (global.ach_timer > 0) {
     var _ach_slide = 0;
     if (global.ach_timer > 160) _ach_slide = -100 * (global.ach_timer - 160) / 20;
     else if (global.ach_timer < 30) _ach_slide = -100 * (30 - global.ach_timer) / 30;
-    var _apx1 = _gw/2 - 230;
-    var _apx2 = _gw/2 + 230;
+    draw_set_font(fnt_heading);
+    var _ath = string_height(global.ach_title);
+    var _atw = string_width(global.ach_title);
+    draw_set_font(fnt_body);
+    var _adh = string_height(global.ach_text);
+    var _adw = string_width(global.ach_text);
+    var _aphw = max(230, max(_atw, _adw) / 2 + 30);
+    var _aph = 12 + _ath + 6 + _adh + 12;
+    var _apx1 = _gw/2 - _aphw;
+    var _apx2 = _gw/2 + _aphw;
     var _apy1 = 14 + _ach_slide;
-    var _apy2 = 100 + _ach_slide;
+    var _apy2 = _apy1 + _aph;
     draw_set_color(c_black);
     draw_rectangle(_apx1, _apy1, _apx2, _apy2, false);
     draw_set_color(_blood);
     draw_rectangle(_apx1, _apy1, _apx2, _apy2, true);
     draw_set_halign(fa_center);
     draw_set_font(fnt_heading);
-    var _atitle_h = string_height(global.ach_title);
     draw_set_color(c_black);
-    draw_text(_gw/2 + 2, _apy1 + 12, global.ach_title);
+    draw_text(_gw/2 + 2, _apy1 + 12 + 2, global.ach_title);
     draw_set_color(c_red);
-    draw_text(_gw/2, _apy1 + 10, global.ach_title);
+    draw_text(_gw/2, _apy1 + 12, global.ach_title);
     draw_set_font(fnt_body);
     draw_set_color(_bone);
-    draw_text(_gw/2, _apy1 + 12 + _atitle_h + 6, global.ach_text);
+    draw_text(_gw/2, _apy1 + 12 + _ath + 6, global.ach_text);
     draw_set_halign(fa_left);
     draw_set_color(c_white);
 }
